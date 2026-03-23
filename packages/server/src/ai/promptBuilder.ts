@@ -72,63 +72,21 @@ export function buildPass1UserPrompt(request: GenerateRequest): string {
 }
 
 export function buildPass2SystemPrompt(design: DesignSpec): string {
-  const blockList = coreBlocks.map((b) => `  - ${b}`).join('\n')
   const fileList = requiredFiles.map((f) => `  - ${f}`).join('\n')
 
   return `You are a senior WordPress FSE theme developer generating a complete ThemeManifest.
 
-Design context:
-${JSON.stringify(design, null, 2)}
+Design context (use these colors, fonts, layout):
+${JSON.stringify({ colors: design.colors, typography: design.typography, layout: design.layout }, null, 2)}
 
 Design narrative: ${design.designNarrative}
 
-ALLOWED CORE BLOCKS:
-${blockList}
-
-CORRECT block markup examples:
-
-1. Navigation:
-<!-- wp:navigation {"overlayMenu":"mobile"} /-->
-
-2. Hero with cover block:
-<!-- wp:cover {"dimRatio":50} -->
-<div class="wp-block-cover__inner-container">
-<!-- wp:heading {"level":1} -->
-<h1>Welcome</h1>
-<!-- /wp:heading -->
-<!-- wp:paragraph -->
-<p>Subtitle text here</p>
-<!-- /wp:paragraph -->
-</div>
-<!-- /wp:cover -->
-
-3. Query loop:
-<!-- wp:query -->
-<!-- wp:post-template -->
-<!-- wp:post-title /-->
-<!-- wp:post-excerpt /-->
-<!-- /wp:post-template -->
-<!-- wp:query-pagination -->
-<!-- wp:query-pagination-previous /-->
-<!-- wp:query-pagination-numbers /-->
-<!-- wp:query-pagination-next /-->
-<!-- /wp:query-pagination -->
-<!-- /wp:query -->
-
-WRONG examples (DO NOT USE):
-
-1. WRONG — wp:html (forbidden):
-<!-- wp:html --><div class="custom">Bad</div><!-- /wp:html -->
-CORRECT alternative: Use <!-- wp:group {"layout":{"type":"constrained"}} --> with inner blocks instead.
-
-2. WRONG — unclosed tags:
-<!-- wp:group -->
-<div>Content without closing tag
-CORRECT alternative: Always close blocks: <!-- wp:group -->...<!-- /wp:group -->
-
-3. WRONG — unknown block:
-<!-- wp:acme/custom-hero -->Content<!-- /wp:acme/custom-hero -->
-CORRECT alternative: Use core blocks like <!-- wp:cover --> or <!-- wp:group --> to achieve the same layout.
+RULES:
+- Use ONLY core/ blocks (e.g. core/group, core/paragraph, core/cover, core/query, core/post-template, etc.)
+- NEVER use <!-- wp:html --> — use core/group with layout attributes instead
+- Always close block tags: <!-- wp:group -->...<!-- /wp:group -->
+- Self-closing is fine: <!-- wp:post-title /-->
+- Keep markup SHORT: 5-15 lines per template
 
 You MUST NOT output <!-- wp:html --> anywhere. If you think you need it, use a core/group block with layout attributes instead.
 
@@ -155,7 +113,14 @@ Original request: ${description}
 
 The design narrative is: ${design.designNarrative}
 
-Use the design spec colors, typography, and layout provided in the system prompt. Generate all required templates, template parts, and patterns with valid block markup.
+Use the design spec colors, typography, and layout provided in the system prompt.
+
+Generate these files:
+- templates: index.html, single.html, page.html, archive.html, search.html, 404.html
+- templateParts: header.html, footer.html
+- patterns: hero.php, cta.php, query-loop.php
+
+IMPORTANT: Keep each template's block markup SHORT — 5-15 lines of block comments max. Do not generate verbose HTML. Use self-closing blocks like <!-- wp:post-title /-->.
 
 Return ONLY the JSON object, nothing else.`
 }

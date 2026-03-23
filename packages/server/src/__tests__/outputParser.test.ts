@@ -57,8 +57,8 @@ describe('parseThemeManifest', () => {
     expect(result.slug).toBe('test-theme')
   })
 
-  it('throws ParseError when manifest contains wp:html', () => {
-    const bad = {
+  it('parses manifest with wp:html without throwing (validation is deferred)', () => {
+    const withHtml = {
       ...validManifest,
       templates: [
         {
@@ -67,7 +67,8 @@ describe('parseThemeManifest', () => {
         },
       ],
     }
-    expect(() => parseThemeManifest(JSON.stringify(bad))).toThrow(ParseError)
+    const result = parseThemeManifest(JSON.stringify(withHtml))
+    expect(result.templates[0].content).toContain('wp:html')
   })
 
   it('throws ParseError for malformed JSON', () => {

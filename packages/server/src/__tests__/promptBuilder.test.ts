@@ -58,9 +58,10 @@ describe('promptBuilder', () => {
     expect(prompt).toContain('wp:html')
   })
 
-  it('pass 2 system prompt contains at least one WRONG example annotation', () => {
+  it('pass 2 system prompt contains NEVER wp:html rule', () => {
     const prompt = buildPass2SystemPrompt(design)
-    expect(prompt).toContain('WRONG')
+    expect(prompt).toContain('NEVER')
+    expect(prompt).toContain('wp:html')
   })
 
   it('pass 2 system prompt contains the design narrative', () => {

@@ -10,7 +10,7 @@ import {
 } from './promptBuilder'
 import { parseDesignSpec, parseThemeManifest, ParseError } from './outputParser'
 
-const MODEL = 'claude-sonnet-4-5-20250514'
+const MODEL = 'claude-sonnet-4-5'
 const MAX_RETRIES = 2
 const BACKOFF_BASE_MS = 1000
 
@@ -107,10 +107,13 @@ export class AnthropicProvider implements AIProvider {
       try {
         const response = await this.client.messages.create({
           model: MODEL,
-          max_tokens: 8192,
+          max_tokens: 32000,
           system,
           messages: [{ role: 'user', content: userPrompt }],
         })
+        if (response.stop_reason === 'max_tokens') {
+          console.warn('Response truncated (max_tokens reached). Retrying may help.')
+        }
         const block = response.content[0]
         if (block.type === 'text') {
           return block.text
