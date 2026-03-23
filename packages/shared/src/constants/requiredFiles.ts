@@ -1,1 +1,5 @@
-export const requiredFiles: string[] = []
+export const requiredFiles: string[] = [
+  'style.css',
+  'theme.json',
+  'templates/index.html',
+]

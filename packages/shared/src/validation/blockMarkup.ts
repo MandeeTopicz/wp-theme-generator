@@ -1,0 +1,157 @@
+import { coreBlocks } from '../constants/coreBlocks'
+
+export interface BlockMarkupError {
+  severity: 'fatal' | 'warning'
+  file: string
+  line: number
+  block: string
+  message: string
+  suggestion?: string
+}
+
+const BLOCK_OPEN = /<!--\s+wp:([a-z][a-z0-9-]*(?:\/[a-z][a-z0-9-]*)?)\s+(\{.*?\}\s+)?(\/?--\s*>)/g
+const BLOCK_CLOSE = /<!--\s+\/wp:([a-z][a-z0-9-]*(?:\/[a-z][a-z0-9-]*)?)\s+-->/g
+const FORBIDDEN_BLOCK = /<!--\s+wp:html[\s{/]/
+
+function getLineNumber(text: string, index: number): number {
+  let line = 1
+  for (let i = 0; i < index && i < text.length; i++) {
+    if (text[i] === '\n') line++
+  }
+  return line
+}
+
+function checkForbiddenBlocks(
+  markup: string,
+  filename: string,
+): BlockMarkupError[] {
+  const errors: BlockMarkupError[] = []
+  const lines = markup.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    if (FORBIDDEN_BLOCK.test(lines[i])) {
+      errors.push({
+        severity: 'fatal',
+        file: filename,
+        line: i + 1,
+        block: 'wp:html',
+        message:
+          'Custom HTML block is forbidden. Use core/group with layout styles instead.',
+      })
+    }
+  }
+  return errors
+}
+
+function checkNesting(markup: string, filename: string): BlockMarkupError[] {
+  const errors: BlockMarkupError[] = []
+  const stack: { block: string; line: number }[] = []
+
+  // Collect all block tags in order
+  const tags: {
+    type: 'open' | 'close' | 'self-closing'
+    block: string
+    index: number
+  }[] = []
+
+  let match: RegExpExecArray | null
+
+  const openRe = new RegExp(BLOCK_OPEN.source, 'g')
+  while ((match = openRe.exec(markup)) !== null) {
+    const block = match[1]
+    const isSelfClosing = match[3].startsWith('/')
+    tags.push({
+      type: isSelfClosing ? 'self-closing' : 'open',
+      block,
+      index: match.index,
+    })
+  }
+
+  const closeRe = new RegExp(BLOCK_CLOSE.source, 'g')
+  while ((match = closeRe.exec(markup)) !== null) {
+    tags.push({ type: 'close', block: match[1], index: match.index })
+  }
+
+  tags.sort((a, b) => a.index - b.index)
+
+  for (const tag of tags) {
+    const line = getLineNumber(markup, tag.index)
+    if (tag.type === 'self-closing') continue
+    if (tag.type === 'open') {
+      stack.push({ block: tag.block, line })
+    } else {
+      if (stack.length === 0) {
+        errors.push({
+          severity: 'fatal',
+          file: filename,
+          line,
+          block: `wp:${tag.block}`,
+          message: `Unexpected closing tag for wp:${tag.block} with no matching opening tag`,
+        })
+      } else if (stack[stack.length - 1].block !== tag.block) {
+        const expected = stack[stack.length - 1]
+        errors.push({
+          severity: 'fatal',
+          file: filename,
+          line,
+          block: `wp:${tag.block}`,
+          message: `Mismatched closing tag: expected wp:${expected.block} but found wp:${tag.block}`,
+        })
+        stack.pop()
+      } else {
+        stack.pop()
+      }
+    }
+  }
+
+  for (const unclosed of stack) {
+    errors.push({
+      severity: 'fatal',
+      file: filename,
+      line: unclosed.line,
+      block: `wp:${unclosed.block}`,
+      message: `Unclosed block wp:${unclosed.block}`,
+    })
+  }
+
+  return errors
+}
+
+function checkAllowlist(markup: string, filename: string): BlockMarkupError[] {
+  const errors: BlockMarkupError[] = []
+  const seen = new Set<string>()
+  const allowSet = new Set(coreBlocks)
+
+  const openRe = new RegExp(BLOCK_OPEN.source, 'g')
+  let match: RegExpExecArray | null
+  while ((match = openRe.exec(markup)) !== null) {
+    const block = match[1]
+    const fullName = block.includes('/') ? block : `core/${block}`
+    if (!seen.has(fullName) && !allowSet.has(fullName)) {
+      seen.add(fullName)
+      errors.push({
+        severity: 'warning',
+        file: filename,
+        line: getLineNumber(markup, match.index),
+        block: fullName,
+        message: `Unknown block "${fullName}" is not in the core allowlist`,
+      })
+    }
+  }
+
+  return errors
+}
+
+export function validateBlockMarkup(
+  markup: string,
+  filename: string,
+): BlockMarkupError[] {
+  if (!markup.trim()) return []
+
+  const errors: BlockMarkupError[] = []
+
+  errors.push(...checkForbiddenBlocks(markup, filename))
+  errors.push(...checkNesting(markup, filename))
+  errors.push(...checkAllowlist(markup, filename))
+
+  return errors
+}
