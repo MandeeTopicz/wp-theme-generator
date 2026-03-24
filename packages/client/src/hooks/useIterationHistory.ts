@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-interface IterationEntry {
+export interface IterationEntry {
   instruction: string
   changedFiles: string[]
   timestamp: string

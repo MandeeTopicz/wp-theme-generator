@@ -1,12 +1,16 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import type { PlaygroundClient } from '@wp-playground/client'
+
+export interface PlaygroundPreviewHandle {
+  reloadTheme: () => Promise<void>
+}
 
 interface Props {
   sessionId: string
   themeSlug: string
 }
 
-type Status = 'loading' | 'active' | 'error'
+type Status = 'loading' | 'active' | 'updating' | 'error'
 type LoadingStep = 'wordpress' | 'installing' | 'activating'
 type Viewport = 'mobile' | 'tablet' | 'desktop'
 type Page = 'front' | 'blog' | 'sample'
@@ -41,7 +45,7 @@ function TrafficLights() {
   )
 }
 
-export default function PlaygroundPreview({ sessionId, themeSlug }: Props) {
+const PlaygroundPreview = forwardRef<PlaygroundPreviewHandle, Props>(function PlaygroundPreview({ sessionId, themeSlug }, ref) {
   const [status, setStatus] = useState<Status>('loading')
   const [currentStep, setCurrentStep] = useState<LoadingStep>('wordpress')
   const [viewport, setViewport] = useState<Viewport>('desktop')
@@ -205,7 +209,35 @@ echo 'done';
     await client.goTo(pagePaths[activePage])
   }, [activePage])
 
-  const showIframe = status === 'loading' || status === 'active'
+  const reloadTheme = useCallback(async () => {
+    const client = clientRef.current
+    if (!client) return
+    setStatus('updating')
+    try {
+      const zipRes = await fetch(`/api/playground/${sessionId}`)
+      if (!zipRes.ok) throw new Error('Failed to fetch updated theme')
+      const zipBlob = await zipRes.blob()
+      const zipFile = new File([zipBlob], `${themeSlug}.zip`, {
+        type: 'application/zip',
+      })
+      const wpPlayground = await import('@wp-playground/client')
+      const { installTheme, activateTheme } = wpPlayground as unknown as {
+        installTheme: (c: PlaygroundClient, o: { themeData: File }) => Promise<void>
+        activateTheme: (c: PlaygroundClient, o: { themeFolderName: string }) => Promise<void>
+      }
+      await installTheme(client, { themeData: zipFile })
+      await activateTheme(client, { themeFolderName: themeSlug })
+      await client.goTo(pagePaths[activePage])
+    } catch (err) {
+      console.error('Failed to reload theme:', err)
+    } finally {
+      setStatus('active')
+    }
+  }, [sessionId, themeSlug, activePage])
+
+  useImperativeHandle(ref, () => ({ reloadTheme }), [reloadTheme])
+
+  const showIframe = status === 'loading' || status === 'active' || status === 'updating'
 
   return (
     <div className="relative h-full flex flex-col">
@@ -273,8 +305,18 @@ echo 'done';
             </div>
           )}
 
-          {/* Browser toolbar — visible only when active */}
-          {status === 'active' && (
+          {/* Updating overlay — subtle overlay during theme reload */}
+          {status === 'updating' && (
+            <div className="absolute inset-0 z-10 m-4 rounded-xl bg-bg1/80 flex items-center justify-center backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-border border-t-accent rounded-full animate-spin" />
+                <span className="text-text1 text-sm">Updating preview...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Browser toolbar — visible when active or updating */}
+          {(status === 'active' || status === 'updating') && (
             <div className="flex items-center gap-3 px-4 py-2.5 bg-bg1 border-b border-border">
               <TrafficLights />
 
@@ -358,7 +400,7 @@ echo 'done';
           </div>
 
           {/* Powered by bar */}
-          {status === 'active' && (
+          {(status === 'active' || status === 'updating') && (
             <div className="flex items-center justify-center gap-1.5 py-1.5 bg-bg1 border-t border-border">
               <span className="w-1.5 h-1.5 rounded-full bg-green" />
               <span className="text-text3 text-[10px]">
@@ -370,4 +412,6 @@ echo 'done';
       )}
     </div>
   )
-}
+})
+
+export default PlaygroundPreview
