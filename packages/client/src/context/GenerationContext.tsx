@@ -8,6 +8,7 @@ interface GenerateBody {
   accentColor?: string
   themeName: string
   themeSlug: string
+  colorPalette?: { name: string; colors: string[] }
 }
 
 interface GenerateResult {

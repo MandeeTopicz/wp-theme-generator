@@ -16,6 +16,10 @@ const generateSchema = z.object({
   accentColor: z.string().optional(),
   themeName: z.string().min(1),
   themeSlug: z.string().min(1),
+  colorPalette: z.object({
+    name: z.string(),
+    colors: z.array(z.string()),
+  }).optional(),
 })
 
 export const generateRouter: RouterType = Router()
@@ -46,7 +50,8 @@ generateRouter.post('/', async (req, res, next) => {
     }
 
     const provider = createAIProvider()
-    const request = { prompt: description, description, siteType, targetAudience, colorMode, accentColor }
+    const { colorPalette } = parsed.data
+    const request = { prompt: description, description, siteType, targetAudience, colorMode, accentColor, colorPalette }
 
     console.log('[generate] Starting Pass 1: design spec...')
     const designSpec = await provider.generateDesignSpec(request)

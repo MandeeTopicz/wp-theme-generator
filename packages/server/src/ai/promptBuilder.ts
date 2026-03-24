@@ -105,6 +105,13 @@ export function buildPass1UserPrompt(request: GenerateRequest): string {
   if (request.accentColor) {
     parts.push(`Accent color: ${request.accentColor}`)
   }
+  if (request.colorPalette?.colors?.length) {
+    const labels = ['background', 'surface', 'accent', 'muted', 'light', 'highlight']
+    const colorDesc = request.colorPalette.colors
+      .map((c, i) => `${labels[i] ?? `color-${i}`}: ${c}`)
+      .join(', ')
+    parts.push(`Use this exact color palette (${request.colorPalette.name}): ${colorDesc}. Name the colors using these roles: ${labels.join(', ')}.`)
+  }
 
   parts.push('Return ONLY the JSON object, nothing else.')
 

@@ -5,4 +5,5 @@ export interface GenerateRequest {
   targetAudience?: string
   colorMode?: 'light' | 'dark' | 'auto'
   accentColor?: string
+  colorPalette?: { name: string; colors: string[] }
 }

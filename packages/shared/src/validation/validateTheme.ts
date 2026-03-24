@@ -103,10 +103,26 @@ export function validateTheme(manifest: ThemeManifest): ValidationResult {
     warnings.push(...checkPaletteContrast(manifest.colors))
   }
 
-  // Required files
-  const fileSet = new Set(manifest.files)
+  // Required files — normalize paths for comparison
+  // The AI may return template names with or without .html extension
+  function normalizePath(p: string): string {
+    const stripped = p.replace(/^\//, '')
+    // Normalize template/part paths: "templates/index" → "templates/index.html"
+    if (stripped.startsWith('templates/') && !stripped.endsWith('.html')) {
+      return stripped + '.html'
+    }
+    if (stripped.startsWith('parts/') && !stripped.endsWith('.html')) {
+      return stripped + '.html'
+    }
+    if (stripped.startsWith('patterns/') && !stripped.endsWith('.php')) {
+      return stripped + '.php'
+    }
+    return stripped
+  }
+
+  const normalizedFiles = new Set(manifest.files.map(normalizePath))
   for (const required of requiredFiles) {
-    if (!fileSet.has(required)) {
+    if (!normalizedFiles.has(normalizePath(required))) {
       errors.push({
         severity: 'fatal',
         file: required,

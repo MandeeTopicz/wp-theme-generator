@@ -5,11 +5,79 @@ interface Props {
   update: (partial: Partial<FormState>) => void
 }
 
-const HERO_STYLES: { value: FormState['heroStyle']; label: string; icon: string }[] = [
-  { value: 'full-width', label: 'Full Width', icon: '\u25AC' },
-  { value: 'split', label: 'Split', icon: '\u25E7' },
-  { value: 'minimal', label: 'Minimal', icon: '\u25AD' },
-  { value: 'none', label: 'None', icon: '\u25CB' },
+function HeroFullWidth() {
+  return (
+    <svg viewBox="0 0 120 80" className="w-full h-full">
+      <rect x="0" y="0" width="120" height="80" rx="4" fill="#1a1a2e" />
+      <rect x="0" y="0" width="120" height="55" fill="#2d2d44" />
+      <rect x="35" y="20" width="50" height="6" rx="2" fill="#f5f5f5" />
+      <rect x="42" y="30" width="36" height="4" rx="1" fill="#a8a8a8" />
+      <rect x="45" y="38" width="30" height="6" rx="3" fill="#7c6fff" />
+      <rect x="10" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="45" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="80" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+    </svg>
+  )
+}
+
+function HeroSplit() {
+  return (
+    <svg viewBox="0 0 120 80" className="w-full h-full">
+      <rect x="0" y="0" width="120" height="80" rx="4" fill="#1a1a2e" />
+      <rect x="0" y="0" width="55" height="55" fill="#2d2d44" />
+      <rect x="62" y="15" width="48" height="5" rx="2" fill="#f5f5f5" />
+      <rect x="62" y="24" width="40" height="3" rx="1" fill="#a8a8a8" />
+      <rect x="62" y="30" width="44" height="3" rx="1" fill="#a8a8a8" />
+      <rect x="62" y="38" width="28" height="5" rx="2" fill="#7c6fff" />
+      <rect x="10" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="45" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="80" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+    </svg>
+  )
+}
+
+function HeroMinimal() {
+  return (
+    <svg viewBox="0 0 120 80" className="w-full h-full">
+      <rect x="0" y="0" width="120" height="80" rx="4" fill="#1a1a2e" />
+      <rect x="30" y="18" width="60" height="5" rx="2" fill="#f5f5f5" />
+      <rect x="35" y="27" width="50" height="3" rx="1" fill="#a8a8a8" />
+      <rect x="38" y="33" width="44" height="3" rx="1" fill="#a8a8a8" />
+      <rect x="10" y="50" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="45" y="50" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="80" y="50" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="10" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="45" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+      <rect x="80" y="62" width="30" height="4" rx="1" fill="#3d3d55" />
+    </svg>
+  )
+}
+
+function HeroNone() {
+  return (
+    <svg viewBox="0 0 120 80" className="w-full h-full">
+      <rect x="0" y="0" width="120" height="80" rx="4" fill="#1a1a2e" />
+      <rect x="10" y="12" width="100" height="4" rx="1" fill="#3d3d55" />
+      <rect x="10" y="22" width="80" height="3" rx="1" fill="#2d2d44" />
+      <rect x="10" y="28" width="90" height="3" rx="1" fill="#2d2d44" />
+      <rect x="10" y="38" width="100" height="4" rx="1" fill="#3d3d55" />
+      <rect x="10" y="48" width="85" height="3" rx="1" fill="#2d2d44" />
+      <rect x="10" y="54" width="95" height="3" rx="1" fill="#2d2d44" />
+      <rect x="10" y="64" width="100" height="4" rx="1" fill="#3d3d55" />
+      <rect x="10" y="72" width="70" height="3" rx="1" fill="#2d2d44" />
+    </svg>
+  )
+}
+
+const HERO_STYLES: {
+  value: FormState['heroStyle']
+  label: string
+  Preview: () => JSX.Element
+}[] = [
+  { value: 'full-width', label: 'Full Width', Preview: HeroFullWidth },
+  { value: 'split', label: 'Split', Preview: HeroSplit },
+  { value: 'minimal', label: 'Minimal', Preview: HeroMinimal },
+  { value: 'none', label: 'None', Preview: HeroNone },
 ]
 
 export default function StepLayout({ form, update }: Props) {
@@ -24,14 +92,16 @@ export default function StepLayout({ form, update }: Props) {
             <button
               key={hero.value}
               onClick={() => update({ heroStyle: hero.value })}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
+              className={`flex flex-col items-center gap-2 p-2 rounded-xl transition-all focus:outline-none ${
                 form.heroStyle === hero.value
-                  ? 'bg-accent text-white'
-                  : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
+                  ? 'ring-2 ring-accent bg-accent/5'
+                  : 'bg-bg3 border border-border hover:border-border2'
               }`}
             >
-              <span className="text-2xl">{hero.icon}</span>
-              <span className="text-xs">{hero.label}</span>
+              <div className="w-full aspect-[3/2] rounded-lg overflow-hidden">
+                <hero.Preview />
+              </div>
+              <span className="text-xs text-text2">{hero.label}</span>
             </button>
           ))}
         </div>

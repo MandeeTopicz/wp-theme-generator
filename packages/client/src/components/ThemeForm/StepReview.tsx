@@ -12,6 +12,7 @@ export default function StepReview({ form, isLoading, onSubmit }: Props) {
     ['Theme slug', form.themeSlug || '(not set)'],
     ['Site type', form.siteType],
     ['Color mode', form.colorMode],
+    ['Color palette', form.colorPalette?.name ?? '(AI-generated)'],
     ['Accent color', form.accentColor],
     ['Heading font', form.headingFont || '(default)'],
     ['Body font', form.bodyFont || '(default)'],

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGeneration } from '../../context/GenerationContext'
 import StepDescription from './StepDescription'
 import StepIdentity from './StepIdentity'
+import StepColorPalette from './StepColorPalette'
 import StepTypography from './StepTypography'
 import StepLayout from './StepLayout'
 import StepReview from './StepReview'
@@ -15,6 +16,7 @@ export interface FormState {
   themeSlug: string
   colorMode: 'light' | 'dark' | 'auto'
   accentColor: string
+  colorPalette?: { name: string; colors: string[] }
   headingFont: string
   bodyFont: string
   typeScale: 'compact' | 'balanced' | 'generous'
@@ -24,7 +26,7 @@ export interface FormState {
   footer: 'simple' | 'rich'
 }
 
-const STEPS = ['Description', 'Identity', 'Typography', 'Layout', 'Review']
+const STEPS = ['Description', 'Identity', 'Colors', 'Typography', 'Layout', 'Review']
 
 const initialState: FormState = {
   description: '',
@@ -66,11 +68,13 @@ export default function ThemeForm() {
       accentColor: form.accentColor,
       themeName: form.themeName,
       themeSlug: form.themeSlug,
+      colorPalette: form.colorPalette,
     })
     navigate('/result/pending')
   }
 
   const isLoading = status === 'generating'
+  const lastStep = STEPS.length - 1
 
   return (
     <div>
@@ -110,9 +114,10 @@ export default function ThemeForm() {
       <div className="bg-bg2 border border-border rounded-xl p-6">
         {step === 0 && <StepDescription form={form} update={update} />}
         {step === 1 && <StepIdentity form={form} update={update} />}
-        {step === 2 && <StepTypography form={form} update={update} />}
-        {step === 3 && <StepLayout form={form} update={update} />}
-        {step === 4 && (
+        {step === 2 && <StepColorPalette form={form} update={update} />}
+        {step === 3 && <StepTypography form={form} update={update} />}
+        {step === 4 && <StepLayout form={form} update={update} />}
+        {step === 5 && (
           <StepReview
             form={form}
             isLoading={isLoading}
@@ -129,7 +134,7 @@ export default function ThemeForm() {
           >
             Back
           </button>
-          {step < 4 && (
+          {step < lastStep && (
             <button
               onClick={() => setStep((s) => s + 1)}
               className="px-6 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50"

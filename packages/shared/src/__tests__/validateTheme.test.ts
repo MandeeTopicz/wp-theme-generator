@@ -73,6 +73,25 @@ describe('validateTheme', () => {
     expect(result.warnings.some((e) => e.severity === 'warning')).toBe(true)
   })
 
+  it('passes when template name lacks .html extension', () => {
+    const result = validateTheme(
+      makeManifest({
+        templates: [
+          {
+            name: 'index',
+            content:
+              '<!-- wp:group --><div><!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph --></div><!-- /wp:group -->',
+          },
+        ],
+        files: ['style.css', 'theme.json', 'templates/index'],
+      }),
+    )
+    expect(result.isValid).toBe(true)
+    expect(
+      result.errors.some((e) => e.message.includes('Required file')),
+    ).toBe(false)
+  })
+
   it('fails for empty manifest with missing required files', () => {
     const result = validateTheme(
       makeManifest({
