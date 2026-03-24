@@ -10,7 +10,7 @@ import {
 } from './promptBuilder'
 import { parseDesignSpec, parseThemeManifest, ParseError } from './outputParser'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250514'
 const MAX_RETRIES = 2
 const BACKOFF_BASE_MS = 1000
 
