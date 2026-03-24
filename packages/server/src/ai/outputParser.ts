@@ -184,5 +184,18 @@ export function parseThemeManifest(raw: string): ThemeManifest {
     )
   }
 
-  return result.data as ThemeManifest
+  const manifest = result.data as ThemeManifest
+
+  // Validate index template has sufficient content
+  const indexTemplate = manifest.templates?.find(
+    (t) => t.name === 'index' || t.name === 'index.html',
+  )
+  if (indexTemplate && indexTemplate.content.length < 400) {
+    throw new ParseError(
+      `index template is too thin (${indexTemplate.content.length} chars). Must contain wp:cover or wp:group hero AND wp:query loop. Current content: ${indexTemplate.content}`,
+      raw,
+    )
+  }
+
+  return manifest
 }

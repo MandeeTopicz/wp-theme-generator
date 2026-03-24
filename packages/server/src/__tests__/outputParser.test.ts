@@ -22,7 +22,8 @@ const validManifest = {
   templates: [
     {
       name: 'index.html',
-      content: '<!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph -->',
+      content:
+        '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->\n<!-- wp:cover {"overlayColor":"primary","minHeight":100,"minHeightUnit":"vh","isDark":true,"align":"full"} -->\n<div class="wp-block-cover alignfull"><!-- wp:group {"layout":{"type":"constrained"}} --><div class="wp-block-group"><!-- wp:site-title {"level":1} /--><!-- wp:site-tagline /--></div><!-- /wp:group --></div>\n<!-- /wp:cover -->\n<!-- wp:query {"queryId":1,"query":{"perPage":6,"postType":"post"}} -->\n<div class="wp-block-query"><!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} --><!-- wp:post-featured-image {"isLink":true} /--><!-- wp:post-title {"isLink":true,"level":3} /--><!-- wp:post-excerpt /--><!-- /wp:post-template --></div>\n<!-- /wp:query -->\n<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
     },
   ],
   templateParts: [],
@@ -61,17 +62,33 @@ describe('parseThemeManifest', () => {
     const withHtml = {
       ...validManifest,
       templates: [
+        ...validManifest.templates,
         {
-          name: 'index.html',
+          name: 'page.html',
           content: '<!-- wp:html --><div>bad</div><!-- /wp:html -->',
         },
       ],
     }
     const result = parseThemeManifest(JSON.stringify(withHtml))
-    expect(result.templates[0].content).toContain('wp:html')
+    expect(result.templates[1].content).toContain('wp:html')
   })
 
   it('throws ParseError for malformed JSON', () => {
     expect(() => parseThemeManifest('not json at all {')).toThrow(ParseError)
+  })
+
+  it('throws ParseError when index template is too thin', () => {
+    const thinManifest = {
+      ...validManifest,
+      templates: [
+        {
+          name: 'index.html',
+          content: '<!-- wp:paragraph --><p>Welcome</p><!-- /wp:paragraph -->',
+        },
+      ],
+    }
+    expect(() => parseThemeManifest(JSON.stringify(thinManifest))).toThrow(
+      /too thin/,
+    )
   })
 })

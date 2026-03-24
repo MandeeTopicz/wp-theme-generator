@@ -52,12 +52,15 @@ generateRouter.post('/', async (req, res, next) => {
     const designSpec = await provider.generateDesignSpec(request)
     console.log('[generate] Pass 1 complete. Starting Pass 2: theme manifest...')
     const manifest = await provider.generateThemeManifest(request, designSpec)
-    // DEBUG: log the index template content
-    const indexTemplate = manifest.templates?.find(t => t.name === 'index' || t.name === 'index.html')
-    console.log('[DEBUG] index template content:', indexTemplate?.content?.substring(0, 500))
-    console.log('[DEBUG] header part content:', manifest.templateParts?.find(p => p.name === 'header')?.content?.substring(0, 300))
-    console.log('[DEBUG] template count:', manifest.templates?.length)
-    console.log('[DEBUG] colors:', manifest.colors?.map(c => c.slug))
+    // DEBUG: log full template content
+    console.log('[DEBUG] template names:', manifest.templates?.map(t => t.name))
+    console.log('[DEBUG] templatePart names:', manifest.templateParts?.map(p => p.name))
+    console.log('[DEBUG] pattern names:', manifest.patterns?.map(p => p.name))
+    console.log('[DEBUG] colors:', manifest.colors?.map(c => `${c.slug}=${c.color}`))
+    const indexTpl = manifest.templates?.find(t => t.name === 'index' || t.name === 'index.html')
+    console.log('[DEBUG] Full index template:\n' + (indexTpl?.content ?? 'NOT FOUND'))
+    const headerPart = manifest.templateParts?.find(p => p.name === 'header' || p.name === 'header.html')
+    console.log('[DEBUG] Full header part:\n' + (headerPart?.content ?? 'NOT FOUND'))
     console.log('[generate] Pass 2 complete. Assembling theme...')
 
     // Patch manifest with user-supplied identity
