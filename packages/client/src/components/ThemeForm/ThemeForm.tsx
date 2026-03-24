@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useThemeGenerator } from '../../hooks/useThemeGenerator'
+import { useGeneration } from '../../context/GenerationContext'
 import StepDescription from './StepDescription'
 import StepIdentity from './StepIdentity'
 import StepTypography from './StepTypography'
@@ -33,7 +33,7 @@ const initialState: FormState = {
   themeName: '',
   themeSlug: '',
   colorMode: 'light',
-  accentColor: '#e94560',
+  accentColor: '#7c6fff',
   headingFont: '',
   bodyFont: '',
   typeScale: 'balanced',
@@ -46,15 +46,15 @@ const initialState: FormState = {
 export default function ThemeForm() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialState)
-  const { generate, isLoading, error } = useThemeGenerator()
+  const { generate, status } = useGeneration()
   const navigate = useNavigate()
 
   function update(partial: Partial<FormState>) {
     setForm((prev) => ({ ...prev, ...partial }))
   }
 
-  async function handleSubmit() {
-    const result = await generate({
+  function handleSubmit() {
+    generate({
       description: form.description,
       siteType: form.siteType,
       targetAudience: form.targetAudience || undefined,
@@ -63,14 +63,10 @@ export default function ThemeForm() {
       themeName: form.themeName,
       themeSlug: form.themeSlug,
     })
-    if (result) {
-      sessionStorage.setItem(
-        `result-${result.sessionId}`,
-        JSON.stringify(result),
-      )
-      navigate(`/result/${result.sessionId}`, { state: result })
-    }
+    navigate('/result/pending')
   }
+
+  const isLoading = status === 'generating'
 
   return (
     <div>
@@ -80,17 +76,17 @@ export default function ThemeForm() {
           <div key={label} className="flex items-center gap-2 flex-1">
             <button
               onClick={() => setStep(i)}
-              className={`w-8 h-8 rounded-full text-sm font-medium flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
+              className={`w-8 h-8 rounded-full text-sm font-medium flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
                 i <= step
-                  ? 'bg-[#e94560] text-white'
-                  : 'bg-[#16213e] text-white/40'
+                  ? 'bg-accent text-white'
+                  : 'bg-bg2 text-text3 border border-border'
               }`}
             >
               {i + 1}
             </button>
             <span
               className={`text-xs hidden sm:inline ${
-                i <= step ? 'text-white' : 'text-white/30'
+                i <= step ? 'text-text1' : 'text-text3'
               }`}
             >
               {label}
@@ -98,7 +94,7 @@ export default function ThemeForm() {
             {i < STEPS.length - 1 && (
               <div
                 className={`flex-1 h-px ${
-                  i < step ? 'bg-[#e94560]' : 'bg-white/10'
+                  i < step ? 'bg-accent' : 'bg-border'
                 }`}
               />
             )}
@@ -107,7 +103,7 @@ export default function ThemeForm() {
       </div>
 
       {/* Step content */}
-      <div className="bg-[#16213e] rounded-xl p-6">
+      <div className="bg-bg2 border border-border rounded-xl p-6">
         {step === 0 && <StepDescription form={form} update={update} />}
         {step === 1 && <StepIdentity form={form} update={update} />}
         {step === 2 && <StepTypography form={form} update={update} />}
@@ -120,37 +116,19 @@ export default function ThemeForm() {
           />
         )}
 
-        {error && (
-          <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-red-400 text-sm font-medium">
-              {error.message || 'An error occurred'}
-            </p>
-            {error.suggestion && (
-              <p className="text-red-300/60 text-xs mt-1">
-                Suggestion: {error.suggestion}
-              </p>
-            )}
-            {error.errors?.map((e, i) => (
-              <p key={i} className="text-red-300/60 text-xs mt-1">
-                {e.field}: {e.message}
-              </p>
-            ))}
-          </div>
-        )}
-
         {/* Navigation */}
-        <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
+        <div className="flex justify-between mt-6 pt-4 border-t border-border">
           <button
             onClick={() => setStep((s) => s - 1)}
             disabled={step === 0}
-            className="px-4 py-2 text-sm text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none"
+            className="px-4 py-2 text-sm text-text2 hover:text-text1 disabled:opacity-30 disabled:cursor-not-allowed transition-colors focus:outline-none"
           >
             Back
           </button>
           {step < 4 && (
             <button
               onClick={() => setStep((s) => s + 1)}
-              className="px-6 py-2 bg-[#e94560] text-white text-sm font-medium rounded-lg hover:bg-[#d63a54] transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50"
+              className="px-6 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               Next
             </button>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import PlaygroundPreview from '../PlaygroundPreview/PlaygroundPreview'
 
 interface ColorEntry {
   name: string
@@ -28,6 +29,8 @@ interface Props {
   templates: string[]
   styleVariations: string[]
   validationResult: ValidationResult | null
+  sessionId?: string
+  themeSlug?: string
 }
 
 export default function PreviewPane({
@@ -36,47 +39,56 @@ export default function PreviewPane({
   templates,
   styleVariations,
   validationResult,
+  sessionId,
+  themeSlug,
 }: Props) {
-  const [tab, setTab] = useState<'preview' | 'validation'>('preview')
+  const [tab, setTab] = useState<'preview' | 'validation' | 'live'>('preview')
   const [activeVariation, setActiveVariation] = useState('base')
   const [viewport, setViewport] = useState<375 | 768 | 1280>(1280)
 
   return (
     <div>
-      {/* Tab bar */}
-      <div className="flex gap-1 mb-4 bg-[#16213e] rounded-lg p-1">
-        {(['preview', 'validation'] as const).map((t) => (
+      <div className="flex gap-1 mb-4 bg-bg2 rounded-lg p-1">
+        {(
+          [
+            { key: 'preview', label: 'Preview' },
+            { key: 'validation', label: 'Validation' },
+            { key: 'live', label: 'Live Preview' },
+          ] as const
+        ).map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-sm rounded-md capitalize transition-colors focus:outline-none ${
-              tab === t
-                ? 'bg-[#e94560] text-white'
-                : 'text-white/50 hover:text-white'
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 py-2 text-sm rounded-md transition-colors focus:outline-none ${
+              tab === t.key
+                ? 'bg-accent text-white'
+                : 'text-text2 hover:text-text1'
             }`}
           >
-            {t}
+            {t.key === 'live' && (
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green mr-1.5 animate-pulse-dot align-middle" />
+            )}
+            {t.label}
           </button>
         ))}
       </div>
 
       {tab === 'preview' && (
         <div className="space-y-6">
-          {/* Color palette */}
           <div>
-            <h4 className="text-white text-sm font-medium mb-3">
+            <h4 className="text-text1 text-sm font-medium mb-3">
               Color Palette
             </h4>
             <div className="flex flex-wrap gap-3">
               {colors.map((c) => (
                 <div key={c.slug} className="flex items-center gap-2">
                   <div
-                    className="w-8 h-8 rounded-lg border border-white/10"
+                    className="w-8 h-8 rounded-lg border border-border"
                     style={{ backgroundColor: c.color }}
                   />
                   <div>
-                    <p className="text-white text-xs">{c.slug}</p>
-                    <p className="text-white/30 text-[10px] font-mono">
+                    <p className="text-text1 text-xs">{c.slug}</p>
+                    <p className="text-text3 text-[10px] font-mono">
                       {c.color}
                     </p>
                   </div>
@@ -85,19 +97,18 @@ export default function PreviewPane({
             </div>
           </div>
 
-          {/* Typography */}
           <div>
-            <h4 className="text-white text-sm font-medium mb-3">Typography</h4>
-            <div className="space-y-2 bg-[#16213e] rounded-lg p-4">
+            <h4 className="text-text1 text-sm font-medium mb-3">Typography</h4>
+            <div className="space-y-2 bg-bg2 rounded-lg p-4 border border-border">
               {fontFamilies.map((f) => (
                 <div key={f.slug}>
                   <p
-                    className="text-white text-lg"
+                    className="text-text1 text-lg"
                     style={{ fontFamily: f.fontFamily }}
                   >
                     {f.name}
                   </p>
-                  <p className="text-white/30 text-xs font-mono">
+                  <p className="text-text3 text-xs font-mono">
                     {f.fontFamily}
                   </p>
                 </div>
@@ -105,29 +116,27 @@ export default function PreviewPane({
             </div>
           </div>
 
-          {/* Templates wireframe */}
           <div>
-            <h4 className="text-white text-sm font-medium mb-3">Templates</h4>
+            <h4 className="text-text1 text-sm font-medium mb-3">Templates</h4>
             <div className="grid grid-cols-3 gap-2">
               {templates.map((name) => (
                 <div
                   key={name}
-                  className="bg-[#16213e] rounded-lg p-3 text-center"
+                  className="bg-bg2 border border-border rounded-lg p-3 text-center"
                 >
-                  <div className="h-16 bg-white/5 rounded mb-2 flex items-center justify-center">
-                    <span className="text-white/20 text-xs">
+                  <div className="h-16 bg-bg3 rounded mb-2 flex items-center justify-center">
+                    <span className="text-text3 text-xs">
                       {name.replace('.html', '')}
                     </span>
                   </div>
-                  <p className="text-white/40 text-[10px] font-mono">{name}</p>
+                  <p className="text-text3 text-[10px] font-mono">{name}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Style variations */}
           <div>
-            <h4 className="text-white text-sm font-medium mb-3">
+            <h4 className="text-text1 text-sm font-medium mb-3">
               Style Variations
             </h4>
             <div className="flex gap-2">
@@ -137,8 +146,8 @@ export default function PreviewPane({
                   onClick={() => setActiveVariation(v)}
                   className={`px-3 py-1.5 text-xs rounded-lg capitalize transition-colors focus:outline-none ${
                     activeVariation === v
-                      ? 'bg-[#e94560] text-white'
-                      : 'bg-[#16213e] text-white/50 hover:text-white'
+                      ? 'bg-accent text-white'
+                      : 'bg-bg2 text-text2 hover:text-text1 border border-border'
                   }`}
                 >
                   {v}
@@ -147,9 +156,8 @@ export default function PreviewPane({
             </div>
           </div>
 
-          {/* Viewport toggle */}
           <div>
-            <h4 className="text-white text-sm font-medium mb-3">Viewport</h4>
+            <h4 className="text-text1 text-sm font-medium mb-3">Viewport</h4>
             <div className="flex gap-2">
               {([375, 768, 1280] as const).map((vp) => (
                 <button
@@ -157,8 +165,8 @@ export default function PreviewPane({
                   onClick={() => setViewport(vp)}
                   className={`px-3 py-1.5 text-xs rounded-lg transition-colors focus:outline-none ${
                     viewport === vp
-                      ? 'bg-[#e94560] text-white'
-                      : 'bg-[#16213e] text-white/50 hover:text-white'
+                      ? 'bg-accent3 text-bg0'
+                      : 'bg-bg2 text-text2 hover:text-text1 border border-border'
                   }`}
                 >
                   {vp === 375 ? 'Mobile' : vp === 768 ? 'Tablet' : 'Desktop'}
@@ -169,19 +177,22 @@ export default function PreviewPane({
         </div>
       )}
 
+      {tab === 'live' && sessionId && themeSlug && (
+        <PlaygroundPreview sessionId={sessionId} themeSlug={themeSlug} />
+      )}
+
       {tab === 'validation' && validationResult && (
         <div className="space-y-4">
-          {/* Summary */}
           <div
-            className={`p-4 rounded-lg ${
+            className={`p-4 rounded-lg border ${
               validationResult.isValid
-                ? 'bg-green-500/10 border border-green-500/30'
-                : 'bg-red-500/10 border border-red-500/30'
+                ? 'bg-green/5 border-green/30'
+                : 'bg-red-500/10 border-red-500/30'
             }`}
           >
             <p
               className={`text-sm font-medium ${
-                validationResult.isValid ? 'text-green-400' : 'text-red-400'
+                validationResult.isValid ? 'text-green' : 'text-red-400'
               }`}
             >
               {validationResult.isValid
@@ -190,7 +201,6 @@ export default function PreviewPane({
             </p>
           </div>
 
-          {/* Errors */}
           {validationResult.errors.map((err, i) => (
             <div
               key={i}
@@ -210,14 +220,13 @@ export default function PreviewPane({
             </div>
           ))}
 
-          {/* Warnings */}
           {validationResult.warnings.map((warn, i) => (
             <div
               key={i}
-              className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4"
+              className="bg-yellow/10 border border-yellow/20 rounded-lg p-4"
             >
-              <p className="text-amber-400 text-sm">{warn.message}</p>
-              <div className="flex gap-4 mt-1 text-xs text-amber-300/50">
+              <p className="text-yellow text-sm">{warn.message}</p>
+              <div className="flex gap-4 mt-1 text-xs text-yellow/50">
                 {warn.file && <span>File: {warn.file}</span>}
                 {warn.block && <span>Block: {warn.block}</span>}
               </div>

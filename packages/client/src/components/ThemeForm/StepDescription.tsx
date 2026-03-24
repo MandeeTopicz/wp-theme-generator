@@ -13,7 +13,7 @@ export default function StepDescription({ form, update }: Props) {
       <div>
         <label
           htmlFor="description"
-          className="block text-white text-sm font-medium mb-2"
+          className="block text-text1 text-sm font-medium mb-2"
         >
           Describe your ideal theme
         </label>
@@ -24,15 +24,15 @@ export default function StepDescription({ form, update }: Props) {
           placeholder="A modern photography portfolio with a dark aesthetic, large hero images, and a minimal navigation..."
           rows={5}
           maxLength={1000}
-          className="w-full bg-[#0f0f23] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 focus:border-transparent"
+          className="w-full bg-bg3 border border-border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
         />
         <div className="flex justify-between mt-1">
-          <span className="text-xs text-white/30">Min 20 characters</span>
+          <span className="text-xs text-text3">Min 20 characters</span>
           <span
             className={`text-xs ${
               form.description.length > 950
-                ? 'text-[#e94560]'
-                : 'text-white/30'
+                ? 'text-accent2'
+                : 'text-text3'
             }`}
           >
             {form.description.length}/1000
@@ -41,7 +41,7 @@ export default function StepDescription({ form, update }: Props) {
       </div>
 
       <div>
-        <label className="block text-white text-sm font-medium mb-2">
+        <label className="block text-text1 text-sm font-medium mb-2">
           Site type
         </label>
         <div className="flex flex-wrap gap-2">
@@ -49,10 +49,10 @@ export default function StepDescription({ form, update }: Props) {
             <button
               key={type}
               onClick={() => update({ siteType: type })}
-              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
+              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
                 form.siteType === type
-                  ? 'bg-[#e94560] text-white'
-                  : 'bg-[#0f0f23] text-white/60 hover:text-white border border-white/10'
+                  ? 'bg-accent text-white'
+                  : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
               }`}
             >
               {type}
@@ -64,10 +64,10 @@ export default function StepDescription({ form, update }: Props) {
       <div>
         <label
           htmlFor="targetAudience"
-          className="block text-white text-sm font-medium mb-2"
+          className="block text-text1 text-sm font-medium mb-2"
         >
           Target audience{' '}
-          <span className="text-white/30 font-normal">(optional)</span>
+          <span className="text-text3 font-normal">(optional)</span>
         </label>
         <input
           id="targetAudience"
@@ -75,7 +75,7 @@ export default function StepDescription({ form, update }: Props) {
           value={form.targetAudience}
           onChange={(e) => update({ targetAudience: e.target.value })}
           placeholder="e.g. Creative professionals, tech startups"
-          className="w-full bg-[#0f0f23] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 focus:border-transparent"
+          className="w-full bg-bg3 border border-border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
         />
       </div>
     </div>

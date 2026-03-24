@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit'
 import { sanitize } from './middleware/sanitize'
 import { errorHandler } from './middleware/errorHandler'
 import { generateRouter } from './routes/generate'
-import { downloadRouter } from './routes/download'
+import { downloadRouter, playgroundRouter } from './routes/download'
 import { validateRouter } from './routes/validate'
 import { iterateRouter } from './routes/iterate'
 
@@ -31,6 +31,7 @@ const generateLimiter = rateLimit({
 
 app.use('/api/generate', generateLimiter, sanitize, generateRouter)
 app.use('/api/download', downloadRouter)
+app.use('/api/playground', playgroundRouter)
 app.use('/api/validate', sanitize, validateRouter)
 app.use('/api/iterate', sanitize, iterateRouter)
 

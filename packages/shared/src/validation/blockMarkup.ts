@@ -141,6 +141,39 @@ function checkAllowlist(markup: string, filename: string): BlockMarkupError[] {
   return errors
 }
 
+export function validateQueryLoop(
+  markup: string,
+  filename: string,
+): BlockMarkupError[] {
+  const warnings: BlockMarkupError[] = []
+  const queryRe = /<!--\s+wp:query[\s{]/g
+  let match: RegExpExecArray | null
+  while ((match = queryRe.exec(markup)) !== null) {
+    const line = getLineNumber(markup, match.index)
+    const hasPostTemplate = /<!--\s+wp:post-template[\s{/]/.test(markup)
+    const hasPostTitle = /<!--\s+wp:post-title[\s{/]/.test(markup)
+    if (!hasPostTemplate) {
+      warnings.push({
+        severity: 'warning',
+        file: filename,
+        line,
+        block: 'wp:query',
+        message: 'Query block is missing wp:post-template child',
+      })
+    }
+    if (!hasPostTitle) {
+      warnings.push({
+        severity: 'warning',
+        file: filename,
+        line,
+        block: 'wp:query',
+        message: 'Query block is missing wp:post-title in its template',
+      })
+    }
+  }
+  return warnings
+}
+
 export function validateBlockMarkup(
   markup: string,
   filename: string,

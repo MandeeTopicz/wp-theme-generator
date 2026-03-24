@@ -4,6 +4,24 @@ import path from 'node:path'
 import os from 'node:os'
 
 export const downloadRouter: RouterType = Router()
+export const playgroundRouter: RouterType = Router()
+
+playgroundRouter.get('/:sessionId', (req, res) => {
+  const { sessionId } = req.params
+  const zipPath = path.join(os.tmpdir(), `${sessionId}.zip`)
+
+  if (!fs.existsSync(zipPath)) {
+    res.status(404).json({
+      error: true,
+      code: 'NOT_FOUND',
+      message: 'Theme not found or expired',
+    })
+    return
+  }
+
+  res.setHeader('Content-Type', 'application/zip')
+  fs.createReadStream(zipPath).pipe(res)
+})
 
 downloadRouter.get('/:sessionId', (req, res) => {
   const { sessionId } = req.params

@@ -43,7 +43,7 @@ function CodeViewer({ content, language }: { content: string; language: string }
   }, [content, language])
 
   return (
-    <pre className="text-xs overflow-auto max-h-[600px] bg-[#0d1117] rounded-lg p-4">
+    <pre className="text-xs overflow-auto max-h-[600px] bg-bg0 rounded-lg p-4">
       <code ref={codeRef} className={`language-${language}`}>
         {content}
       </code>
@@ -63,10 +63,10 @@ export default function FileExplorer({ files, selectedFile, onSelect }: Props) {
 
   return (
     <div className="flex gap-4 h-full">
-      <div className="w-56 shrink-0 bg-[#16213e] rounded-xl p-3 overflow-y-auto max-h-[700px]">
+      <div className="w-56 shrink-0 bg-bg2 rounded-xl p-3 overflow-y-auto max-h-[700px] border border-border">
         {Object.entries(groups).map(([dir, entries]) => (
           <div key={dir} className="mb-3">
-            <p className="text-white/30 text-xs font-mono mb-1 px-2">
+            <p className="text-text3 text-xs font-mono mb-1 px-2">
               {dir === '/' ? 'root' : dir}
             </p>
             {entries.map((f) => (
@@ -75,12 +75,12 @@ export default function FileExplorer({ files, selectedFile, onSelect }: Props) {
                 onClick={() => onSelect(f.path)}
                 className={`w-full text-left px-2 py-1.5 text-xs rounded-md transition-colors flex justify-between items-center focus:outline-none ${
                   selectedFile === f.path
-                    ? 'bg-[#e94560]/20 text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-accent/20 text-text1'
+                    : 'text-text2 hover:text-text1 hover:bg-white/5'
                 }`}
               >
                 <span className="truncate font-mono">{f.name}</span>
-                <span className="text-white/20 text-[10px] ml-2 shrink-0">
+                <span className="text-text3 text-[10px] ml-2 shrink-0">
                   {(new TextEncoder().encode(f.content).length / 1024).toFixed(1)}k
                 </span>
               </button>
@@ -95,7 +95,7 @@ export default function FileExplorer({ files, selectedFile, onSelect }: Props) {
             language={getLanguage(selected.name)}
           />
         ) : (
-          <div className="flex items-center justify-center h-64 text-white/30 text-sm">
+          <div className="flex items-center justify-center h-64 text-text3 text-sm">
             Select a file to view its content
           </div>
         )}

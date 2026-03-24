@@ -24,7 +24,7 @@ export default function StepIdentity({ form, update }: Props) {
       <div>
         <label
           htmlFor="themeName"
-          className="block text-white text-sm font-medium mb-2"
+          className="block text-text1 text-sm font-medium mb-2"
         >
           Theme name
         </label>
@@ -37,14 +37,14 @@ export default function StepIdentity({ form, update }: Props) {
             update({ themeName: name, themeSlug: toSlug(name) })
           }}
           placeholder="My Awesome Theme"
-          className="w-full bg-[#0f0f23] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 focus:border-transparent"
+          className="w-full bg-bg3 border border-border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
         />
       </div>
 
       <div>
         <label
           htmlFor="themeSlug"
-          className="block text-white text-sm font-medium mb-2"
+          className="block text-text1 text-sm font-medium mb-2"
         >
           Theme slug
         </label>
@@ -54,8 +54,8 @@ export default function StepIdentity({ form, update }: Props) {
           value={form.themeSlug}
           onChange={(e) => update({ themeSlug: e.target.value })}
           placeholder="my-awesome-theme"
-          className={`w-full bg-[#0f0f23] border rounded-lg px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 focus:border-transparent ${
-            slugValid ? 'border-white/10' : 'border-red-500/50'
+          className={`w-full bg-bg3 border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors ${
+            slugValid ? 'border-border' : 'border-red-500/50'
           }`}
         />
         {!slugValid && (
@@ -66,7 +66,7 @@ export default function StepIdentity({ form, update }: Props) {
       </div>
 
       <div>
-        <label className="block text-white text-sm font-medium mb-2">
+        <label className="block text-text1 text-sm font-medium mb-2">
           Color mode
         </label>
         <div className="flex gap-2">
@@ -74,10 +74,10 @@ export default function StepIdentity({ form, update }: Props) {
             <button
               key={mode}
               onClick={() => update({ colorMode: mode })}
-              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
+              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
                 form.colorMode === mode
-                  ? 'bg-[#e94560] text-white'
-                  : 'bg-[#0f0f23] text-white/60 hover:text-white border border-white/10'
+                  ? 'bg-accent text-white'
+                  : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
               }`}
             >
               {mode}
@@ -89,7 +89,7 @@ export default function StepIdentity({ form, update }: Props) {
       <div>
         <label
           htmlFor="accentColor"
-          className="block text-white text-sm font-medium mb-2"
+          className="block text-text1 text-sm font-medium mb-2"
         >
           Accent color
         </label>
@@ -105,7 +105,7 @@ export default function StepIdentity({ form, update }: Props) {
             type="text"
             value={form.accentColor}
             onChange={(e) => update({ accentColor: e.target.value })}
-            className="w-32 bg-[#0f0f23] border border-white/10 rounded-lg px-4 py-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 focus:border-transparent"
+            className="w-32 bg-bg3 border border-border rounded-lg px-4 py-2 text-text1 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
           />
         </div>
       </div>

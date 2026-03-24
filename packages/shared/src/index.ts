@@ -15,7 +15,11 @@ export {
   validateThemeSlug,
   validateThemeJson,
   validateBlockMarkup,
+  validateQueryLoop,
   validateTheme,
+  checkPaletteContrast,
+  getContrastRatio,
+  getLuminance,
 } from './validation'
 export type {
   BlockMarkupError,

@@ -3,6 +3,8 @@ import { requiredFiles } from '../constants/requiredFiles'
 import { validateThemeSlug } from './themeSlug'
 import { validateThemeJson } from './themeJson'
 import { validateBlockMarkup } from './blockMarkup'
+import { validateQueryLoop } from './blockMarkup'
+import { checkPaletteContrast } from './contrastCheck'
 
 export interface ValidationError {
   severity: 'fatal' | 'warning'
@@ -86,6 +88,19 @@ export function validateTheme(manifest: ThemeManifest): ValidationResult {
         warnings.push(err)
       }
     }
+  }
+
+  // Query loop quality
+  for (const tpl of manifest.templates) {
+    warnings.push(...validateQueryLoop(tpl.content, `templates/${tpl.name}`))
+  }
+  for (const pattern of manifest.patterns) {
+    warnings.push(...validateQueryLoop(pattern.content, `patterns/${pattern.name}`))
+  }
+
+  // Palette contrast
+  if (manifest.colors) {
+    warnings.push(...checkPaletteContrast(manifest.colors))
   }
 
   // Required files

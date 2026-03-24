@@ -6,17 +6,17 @@ interface Props {
 }
 
 const HERO_STYLES: { value: FormState['heroStyle']; label: string; icon: string }[] = [
-  { value: 'full-width', label: 'Full Width', icon: '▬' },
-  { value: 'split', label: 'Split', icon: '◧' },
-  { value: 'minimal', label: 'Minimal', icon: '▭' },
-  { value: 'none', label: 'None', icon: '○' },
+  { value: 'full-width', label: 'Full Width', icon: '\u25AC' },
+  { value: 'split', label: 'Split', icon: '\u25E7' },
+  { value: 'minimal', label: 'Minimal', icon: '\u25AD' },
+  { value: 'none', label: 'None', icon: '\u25CB' },
 ]
 
 export default function StepLayout({ form, update }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-white text-sm font-medium mb-3">
+        <label className="block text-text1 text-sm font-medium mb-3">
           Hero style
         </label>
         <div className="grid grid-cols-4 gap-3">
@@ -24,10 +24,10 @@ export default function StepLayout({ form, update }: Props) {
             <button
               key={hero.value}
               onClick={() => update({ heroStyle: hero.value })}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
                 form.heroStyle === hero.value
-                  ? 'bg-[#e94560] text-white'
-                  : 'bg-[#0f0f23] text-white/60 hover:text-white border border-white/10'
+                  ? 'bg-accent text-white'
+                  : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
               }`}
             >
               <span className="text-2xl">{hero.icon}</span>
@@ -38,7 +38,7 @@ export default function StepLayout({ form, update }: Props) {
       </div>
 
       <div>
-        <label className="block text-white text-sm font-medium mb-2">
+        <label className="block text-text1 text-sm font-medium mb-2">
           Navigation
         </label>
         <div className="flex gap-2">
@@ -46,10 +46,10 @@ export default function StepLayout({ form, update }: Props) {
             <button
               key={nav}
               onClick={() => update({ navigation: nav })}
-              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
+              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
                 form.navigation === nav
-                  ? 'bg-[#e94560] text-white'
-                  : 'bg-[#0f0f23] text-white/60 hover:text-white border border-white/10'
+                  ? 'bg-accent text-white'
+                  : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
               }`}
             >
               {nav}
@@ -60,13 +60,13 @@ export default function StepLayout({ form, update }: Props) {
 
       <div className="flex gap-8">
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-text1 text-sm font-medium mb-2">
             Sidebar
           </label>
           <button
             onClick={() => update({ sidebar: !form.sidebar })}
-            className={`w-14 h-7 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
-              form.sidebar ? 'bg-[#e94560]' : 'bg-[#0f0f23] border border-white/10'
+            className={`w-14 h-7 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-accent/50 ${
+              form.sidebar ? 'bg-accent' : 'bg-bg3 border border-border'
             }`}
           >
             <span
@@ -77,7 +77,7 @@ export default function StepLayout({ form, update }: Props) {
           </button>
         </div>
         <div>
-          <label className="block text-white text-sm font-medium mb-2">
+          <label className="block text-text1 text-sm font-medium mb-2">
             Footer
           </label>
           <div className="flex gap-2">
@@ -85,10 +85,10 @@ export default function StepLayout({ form, update }: Props) {
               <button
                 key={f}
                 onClick={() => update({ footer: f })}
-                className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 ${
+                className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
                   form.footer === f
-                    ? 'bg-[#e94560] text-white'
-                    : 'bg-[#0f0f23] text-white/60 hover:text-white border border-white/10'
+                    ? 'bg-accent text-white'
+                    : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
                 }`}
               >
                 {f}

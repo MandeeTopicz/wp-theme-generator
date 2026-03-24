@@ -77,6 +77,12 @@ describe('buildThemeJSON', () => {
     expect(names).toContain('header')
     expect(names).toContain('footer')
   })
+
+  it('includes styles.color.background and styles.color.text', () => {
+    const json = JSON.parse(buildThemeJSON(manifest))
+    expect(json.styles.color.background).toContain('--wp--preset--color--primary')
+    expect(json.styles.color.text).toContain('--wp--preset--color--secondary')
+  })
 })
 
 describe('buildTemplateFile', () => {

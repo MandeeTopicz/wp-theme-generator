@@ -24,9 +24,9 @@ export default function StepReview({ form, isLoading, onSubmit }: Props) {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-white font-semibold text-lg">Review your choices</h3>
+      <h3 className="text-text1 font-semibold text-lg">Review your choices</h3>
 
-      <div className="bg-[#0f0f23] rounded-lg overflow-hidden">
+      <div className="bg-bg3 rounded-lg overflow-hidden border border-border">
         {rows.map(([label, value], i) => (
           <div
             key={label}
@@ -34,28 +34,31 @@ export default function StepReview({ form, isLoading, onSubmit }: Props) {
               i % 2 === 0 ? 'bg-white/[0.02]' : ''
             }`}
           >
-            <span className="text-white/50">{label}</span>
-            <span className="text-white font-medium">{value}</span>
+            <span className="text-text2">{label}</span>
+            <span className="text-text1 font-medium">{value}</span>
           </div>
         ))}
       </div>
 
-      <div className="bg-[#0f0f23] rounded-lg p-4">
-        <p className="text-white/40 text-sm">
-          <strong className="text-white/60">Description:</strong>{' '}
+      <div className="bg-bg3 rounded-lg p-4 border border-border">
+        <p className="text-text2 text-sm">
+          <strong className="text-text1">Description:</strong>{' '}
           {form.description.slice(0, 200)}
           {form.description.length > 200 ? '...' : ''}
         </p>
       </div>
 
-      <p className="text-white/30 text-sm text-center">
+      <p className="text-text3 text-sm text-center">
         Estimated generation time: ~30-60 seconds
       </p>
 
       <button
         onClick={onSubmit}
         disabled={isLoading || !form.themeName || !form.themeSlug || form.description.length < 20}
-        className="w-full py-4 bg-[#e94560] text-white font-semibold text-lg rounded-xl hover:bg-[#d63a54] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#e94560]/50 flex items-center justify-center gap-3"
+        className="w-full py-4 text-white font-semibold text-lg rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent/50 flex items-center justify-center gap-3 hover:brightness-110 active:scale-[0.97]"
+        style={{
+          background: 'linear-gradient(135deg, #7c6fff, #ff6b9d)',
+        }}
       >
         {isLoading && (
           <svg

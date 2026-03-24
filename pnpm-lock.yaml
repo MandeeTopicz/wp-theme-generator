@@ -26,6 +26,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@wp-playground/client':
+        specifier: ^3.1.13
+        version: 3.1.13
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -1018,6 +1021,10 @@ packages:
 
   '@vitest/utils@2.1.9':
     resolution: {integrity: sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ==}
+
+  '@wp-playground/client@3.1.13':
+    resolution: {integrity: sha512-4AllUTnC8WSZNCE1EOjnSNAMtPf/qPE1AaZjUMgjuCrmLNfhFhMZNOeEddhWNW+ra6IsyUqU3RgnUx5kZ1sGXA==}
+    engines: {node: '>=20.10.0', npm: '>=10.2.3'}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -3222,6 +3229,8 @@ snapshots:
       '@vitest/pretty-format': 2.1.9
       loupe: 3.2.1
       tinyrainbow: 1.2.0
+
+  '@wp-playground/client@3.1.13': {}
 
   abort-controller@3.0.0:
     dependencies:

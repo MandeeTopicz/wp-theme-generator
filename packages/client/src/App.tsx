@@ -1,31 +1,45 @@
 import { Routes, Route, Link } from 'react-router-dom'
+import { GenerationProvider } from './context/GenerationContext'
 import HomePage from './pages/HomePage'
 import GeneratePage from './pages/GeneratePage'
 import ResultPage from './pages/ResultPage'
 
 function Nav() {
   return (
-    <nav className="bg-[#1a1a2e] border-b border-white/10 px-6 py-4">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <nav className="bg-bg1 border-b border-border px-6 py-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#e94560] flex items-center justify-center text-white font-bold text-sm">
+          <div
+            className="w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-white font-bold text-[10px]"
+            style={{
+              background: 'linear-gradient(135deg, #7c6fff, #ff6b9d)',
+            }}
+          >
             WP
           </div>
-          <div>
-            <h1 className="text-white font-semibold text-lg leading-tight">
-              WP Theme Generator
-            </h1>
-            <p className="text-white/40 text-xs">
-              AI-powered WordPress block themes
-            </p>
+          <div className="flex items-center gap-2">
+            <span className="text-text1 font-semibold text-sm tracking-[-0.01em]">
+              Theme Generator
+            </span>
+            <span className="text-text3 text-[10px] font-medium bg-bg2 border border-border px-1.5 py-0.5 rounded-full">
+              v1.0
+            </span>
           </div>
         </Link>
-        <Link
-          to="/generate"
-          className="px-4 py-2 bg-[#e94560] text-white text-sm font-medium rounded-lg hover:bg-[#d63a54] transition-colors focus:outline-none focus:ring-2 focus:ring-[#e94560]/50"
-        >
-          Generate Theme
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/generate"
+            className="px-3 py-1.5 text-text2 text-sm border border-border2 rounded-full hover:text-text1 hover:border-accent/40 transition-colors"
+          >
+            New Theme
+          </Link>
+          <Link
+            to="/generate"
+            className="px-4 py-1.5 bg-accent text-white text-sm font-medium rounded-full hover:bg-accent/90 transition-colors"
+          >
+            Generate Theme
+          </Link>
+        </div>
       </div>
     </nav>
   )
@@ -33,13 +47,15 @@ function Nav() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-[#0f0f23]">
-      <Nav />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/generate" element={<GeneratePage />} />
-        <Route path="/result/:sessionId" element={<ResultPage />} />
-      </Routes>
-    </div>
+    <GenerationProvider>
+      <div className="min-h-screen bg-bg0 text-text1">
+        <Nav />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/generate" element={<GeneratePage />} />
+          <Route path="/result/:sessionId" element={<ResultPage />} />
+        </Routes>
+      </div>
+    </GenerationProvider>
   )
 }

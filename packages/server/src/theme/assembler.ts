@@ -4,6 +4,12 @@ import type {
   ColorPaletteEntry,
 } from '@wp-theme-gen/shared'
 
+const SKIP_LINK = `<!-- wp:group {"className":"skip-link-wrapper","style":{"position":"absolute","left":"-9999px"}} -->
+<div class="wp-block-group skip-link-wrapper"><!-- wp:paragraph {"className":"skip-link"} -->
+<p class="skip-link"><a href="#main-content">Skip to content</a></p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->`
+
 export function buildStyleCSS(manifest: ThemeManifest): string {
   return `/*
 Theme Name: ${manifest.name}
@@ -31,6 +37,13 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
       postTypes: ['page', 'post'],
     }))
 
+  // Derive style colors from palette:
+  // First entry = background (typically darkest), last = text (typically lightest)
+  // If only one color, use it as background with white text
+  const bgSlug = colors[0]?.slug || 'base'
+  const textSlug = colors.length > 1 ? colors[colors.length - 1]!.slug : 'contrast'
+  const accentSlug = colors[Math.min(6, colors.length - 1)]?.slug || colors[0]?.slug || 'accent'
+
   const result = {
     $schema: 'https://schemas.wp.org/trunk/theme.json',
     version: 3,
@@ -54,6 +67,24 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
         wideSize,
       },
     },
+    styles: {
+      color: {
+        background: `var(--wp--preset--color--${bgSlug})`,
+        text: `var(--wp--preset--color--${textSlug})`,
+      },
+      elements: {
+        link: {
+          color: {
+            text: `var(--wp--preset--color--${accentSlug})`,
+          },
+        },
+        heading: {
+          color: {
+            text: `var(--wp--preset--color--${textSlug})`,
+          },
+        },
+      },
+    },
     templateParts: [
       { name: 'header', area: 'header', title: 'Header' },
       { name: 'footer', area: 'footer', title: 'Footer' },
@@ -69,9 +100,31 @@ export function buildTemplateFile(template: BlockTemplate): string {
     return template.content
   }
 
-  return `<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+  return `${SKIP_LINK}
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 ${template.content}
 <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->`
+}
+
+function ensureNavAriaLabel(content: string): string {
+  return content.replace(
+    /<!--\s+wp:navigation\s+(\{[^}]*\})?\s*(\/?)-->/g,
+    (match, attrsStr?: string, selfClose?: string) => {
+      if (attrsStr) {
+        try {
+          const attrs = JSON.parse(attrsStr) as Record<string, unknown>
+          if (!attrs.ariaLabel) {
+            attrs.ariaLabel = 'Main navigation'
+            return `<!-- wp:navigation ${JSON.stringify(attrs)} ${selfClose || ''}-->`
+          }
+        } catch {
+          // leave as-is if attrs aren't valid JSON
+        }
+        return match
+      }
+      return `<!-- wp:navigation {"ariaLabel":"Main navigation"} ${selfClose || ''}-->`
+    },
+  )
 }
 
 export function buildPatternFile(pattern: {
@@ -80,6 +133,8 @@ export function buildPatternFile(pattern: {
   categories: string[]
   content: string
 }): string {
+  const content = ensureNavAriaLabel(pattern.content)
+
   return `<?php
 /**
  * Title: ${pattern.title}
@@ -88,7 +143,7 @@ export function buildPatternFile(pattern: {
  * Block Types: core/post-content
  */
 ?>
-${pattern.content}`
+${content}`
 }
 
 export function buildStyleVariation(variation: {

@@ -1,1 +1,96 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg0: #060608;
+  --color-bg1: #0c0c12;
+  --color-bg2: #12121c;
+  --color-bg3: #1a1a28;
+  --color-border: #ffffff0f;
+  --color-border2: #ffffff18;
+  --color-text1: #f0f0f8;
+  --color-text2: #9090b0;
+  --color-text3: #505068;
+  --color-accent: #7c6fff;
+  --color-accent2: #ff6b9d;
+  --color-accent3: #00d9ff;
+  --color-green: #00e5a0;
+  --color-yellow: #ffd166;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg0);
+    color: var(--color-text1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px 1px var(--color-green);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 10px 3px var(--color-green);
+    opacity: 0.7;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.7);
+    opacity: 0.5;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+@utility animate-pulse-dot {
+  animation: pulse-dot 2s infinite;
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right 200ms ease-out forwards;
+}
+
+@utility animate-slide-out-right {
+  animation: slide-out-right 200ms ease-in forwards;
+}
+
+@utility animate-fade-up {
+  animation: fade-up 300ms ease-out forwards;
+}
