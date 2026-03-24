@@ -259,10 +259,10 @@ echo 'done';
 
       {/* Browser chrome + iframe wrapper — single iframe persists across loading and active */}
       {showIframe && (
-        <div className="relative flex-1 flex flex-col bg-bg0 rounded-xl border border-border2 overflow-hidden m-4">
-          {/* Loading overlay — fully opaque, unmounted when not loading */}
+        <div className="relative flex-1 flex flex-col rounded-xl border border-border2 overflow-hidden m-4">
+          {/* Loading overlay — fully opaque bg-bg1, only in DOM when status === 'loading' */}
           {status === 'loading' && (
-            <div className="absolute inset-0 z-10 rounded-xl bg-bg1 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 z-10 bg-bg1 flex flex-col items-center justify-center" style={{ display: status === 'loading' ? undefined : 'none' }}>
               <div className="w-10 h-10 mb-6 border-2 border-border border-t-accent rounded-full animate-spin" />
               <div className="space-y-3 w-full max-w-xs">
                 {loadingSteps.map((step, i) => {
@@ -299,9 +299,9 @@ echo 'done';
             </div>
           )}
 
-          {/* Updating overlay — semi-transparent, unmounted when not updating */}
+          {/* Updating overlay — only in DOM when status === 'updating' */}
           {status === 'updating' && (
-            <div className="absolute inset-0 z-10 rounded-xl bg-bg1/80 flex items-center justify-center backdrop-blur-sm">
+            <div className="absolute inset-0 z-10 bg-bg1/80 flex items-center justify-center backdrop-blur-sm" style={{ display: status === 'updating' ? undefined : 'none' }}>
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 border-2 border-border border-t-accent rounded-full animate-spin" />
                 <span className="text-text1 text-sm">Updating preview...</span>
@@ -380,7 +380,8 @@ echo 'done';
             </div>
           )}
 
-          {/* Iframe container — responsive viewport with dark surround for narrow viewports */}
+          {/* NO overlays should exist in the DOM when status === 'active' */}
+          {/* Iframe container — only background is #060608 dark surround for tablet/mobile viewports */}
           <div
             className="flex-1 overflow-hidden flex justify-center items-start"
             style={{
