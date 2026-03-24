@@ -73,6 +73,15 @@ You must generate 3 genuinely different style variations in the styleVariations 
 NEVER set multiple colors to the same hex value in a variation.
 NEVER generate a variation where all colors are identical.
 
+COLOR ORDERING — CRITICAL:
+When defining colors, always order them from darkest to lightest in the palette array.
+Color index 0 should always be the darkest background color.
+Color index 1-2 should be dark surface colors.
+Color index 3-4 should be mid-tone accent colors.
+Color index 5-6 should be light colors.
+Color index 7+ should be the lightest foreground/text colors.
+This ordering is required for correct theme.json styles generation.
+
 DesignSpec TypeScript interface:
 ${DESIGN_SPEC_SCHEMA}`
 }
@@ -155,6 +164,71 @@ search.html:
 NEVER generate a template with only wp:paragraph blocks.
 
 You MUST NOT output <!-- wp:html --> anywhere.
+
+REQUIRED EXAMPLE — index.html must look similar to this:
+
+<!-- wp:cover {"overlayColor":"primary","minHeight":100,"minHeightUnit":"vh","isDark":true,"align":"full"} -->
+<div class="wp-block-cover alignfull">
+<!-- wp:group {"layout":{"type":"constrained"}} -->
+<div class="wp-block-group">
+<!-- wp:site-title {"level":1,"isLink":false} /-->
+<!-- wp:site-tagline /-->
+<!-- wp:buttons -->
+<div class="wp-block-buttons">
+<!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">View Work</a></div>
+<!-- /wp:button -->
+</div>
+<!-- /wp:buttons -->
+</div>
+<!-- /wp:group -->
+</div>
+<!-- /wp:cover -->
+
+<!-- wp:group {"align":"full","style":{"spacing":{"padding":{"top":"4rem","bottom":"4rem"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group alignfull">
+<!-- wp:query {"queryId":1,"query":{"perPage":6,"postType":"post"}} -->
+<div class="wp-block-query">
+<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+<!-- wp:post-featured-image {"isLink":true,"aspectRatio":"4/3"} /-->
+<!-- wp:post-title {"isLink":true,"level":3} /-->
+<!-- wp:post-excerpt {"moreText":""} /-->
+<!-- wp:post-date /-->
+<!-- /wp:post-template -->
+<!-- wp:query-pagination -->
+<div class="wp-block-query-pagination">
+<!-- wp:query-pagination-previous /-->
+<!-- wp:query-pagination-numbers /-->
+<!-- wp:query-pagination-next /-->
+</div>
+<!-- /wp:query-pagination -->
+<!-- wp:query-no-results -->
+<div class="wp-block-query-no-results">
+<!-- wp:paragraph -->
+<p>No posts found.</p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:query-no-results -->
+</div>
+<!-- /wp:query -->
+</div>
+<!-- /wp:group -->
+
+REQUIRED EXAMPLE — parts/header.html must look similar to this:
+
+<!-- wp:group {"tagName":"header","style":{"position":{"type":"sticky","top":"0px"}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+<header class="wp-block-group">
+<!-- wp:site-logo {"width":48} /-->
+<!-- wp:site-title /-->
+<!-- wp:navigation {"ariaLabel":"Main navigation","layout":{"type":"flex","justifyContent":"right"}} /-->
+</header>
+<!-- /wp:group -->
+
+CRITICAL: Every template must use real WordPress blocks for structure.
+NEVER generate a template that only contains wp:paragraph blocks.
+The index.html MUST contain wp:cover or wp:group for hero AND wp:query for posts.
+The header.html MUST contain wp:navigation.
+If you do not follow these examples, the theme preview will be blank.
 
 Required output schema:
 ${THEME_MANIFEST_SCHEMA}

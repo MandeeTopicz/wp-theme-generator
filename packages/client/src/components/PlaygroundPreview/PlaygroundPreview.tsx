@@ -66,13 +66,16 @@ const PlaygroundPreview = forwardRef<PlaygroundPreviewHandle, Props>(function Pl
     }
 
     try {
+      console.log('[Playground] Fetching theme ZIP...')
       const zipRes = await fetch(`/api/playground/${sessionId}`)
-      if (!zipRes.ok) throw new Error('Failed to fetch theme')
+      if (!zipRes.ok) throw new Error(`Failed to fetch theme: ${zipRes.status}`)
       const zipBlob = await zipRes.blob()
+      console.log('[Playground] ZIP fetched, size:', zipBlob.size, 'bytes')
       const zipFile = new File([zipBlob], `${themeSlug}.zip`, {
         type: 'application/zip',
       })
 
+      console.log('[Playground] Loading WP Playground module...')
       const wpPlayground = await import('@wp-playground/client')
       const { startPlaygroundWeb } = wpPlayground
       const { installTheme, activateTheme } = wpPlayground as unknown as {
@@ -86,92 +89,130 @@ const PlaygroundPreview = forwardRef<PlaygroundPreviewHandle, Props>(function Pl
         ) => Promise<void>
       }
 
+      console.log('[Playground] Starting WordPress...')
       const client = await startPlaygroundWeb({
         iframe: iframeRef.current,
         remoteUrl: REMOTE_URL,
       })
+      console.log('[Playground] WordPress started. Document root:', await client.documentRoot)
 
       setCurrentStep('installing')
+      console.log('[Playground] Installing theme:', themeSlug)
       await installTheme(client, { themeData: zipFile })
+      console.log('[Playground] Theme installed')
 
       setCurrentStep('activating')
+      console.log('[Playground] Activating theme:', themeSlug)
       await activateTheme(client, { themeFolderName: themeSlug })
+      console.log('[Playground] Theme activated')
 
-      // Seed sample content so the preview isn't an empty site
+      // Verify active theme and list installed theme files
       const docRoot = await client.documentRoot
-      const slug = themeSlug.replace(/'/g, "\\'")
-      await client.run({
-        code: `<?php
-include '${docRoot}/wp-load.php';
-update_option('blogname', '${slug} Preview');
-update_option('blogdescription', 'Theme preview powered by WordPress Playground');
+      const phpPrefix = `<?php include '${docRoot}/wp-load.php'; `
 
-$front = wp_insert_post(array(
-  'post_title' => 'Home',
-  'post_content' => '<!-- wp:heading {"level":1} -->
-<h1>Welcome to Your New Theme</h1>
-<!-- /wp:heading -->
+      const verifyResult = await client.run({
+        code: phpPrefix + `
+$theme = wp_get_theme();
+echo "Active theme stylesheet: " . $theme->get_stylesheet() . "\\n";
+echo "Active theme template: " . $theme->get_template() . "\\n";
+echo "Theme root: " . $theme->get_theme_root() . "/" . $theme->get_stylesheet() . "\\n";
+$theme_dir = $theme->get_theme_root() . "/" . $theme->get_stylesheet();
+if (is_dir($theme_dir)) {
+  $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($theme_dir, RecursiveDirectoryIterator::SKIP_DOTS));
+  echo "Theme files:\\n";
+  foreach ($files as $file) {
+    echo "  " . str_replace($theme_dir . "/", "", $file->getPathname()) . " (" . $file->getSize() . " bytes)\\n";
+  }
+} else {
+  echo "ERROR: Theme directory does not exist: " . $theme_dir . "\\n";
+}
 
-<!-- wp:paragraph -->
-<p>This is a live preview of your generated WordPress block theme.</p>
-<!-- /wp:paragraph -->
+// Check theme.json content
+$theme_json_path = $theme_dir . "/theme.json";
+if (file_exists($theme_json_path)) {
+  $tj = json_decode(file_get_contents($theme_json_path), true);
+  echo "\\ntheme.json version: " . ($tj["version"] ?? "missing") . "\\n";
+  echo "theme.json has styles: " . (isset($tj["styles"]) ? "YES" : "NO") . "\\n";
+  if (isset($tj["styles"]["color"])) {
+    echo "styles.color.background: " . $tj["styles"]["color"]["background"] . "\\n";
+    echo "styles.color.text: " . $tj["styles"]["color"]["text"] . "\\n";
+  }
+  echo "palette count: " . count($tj["settings"]["color"]["palette"] ?? []) . "\\n";
+} else {
+  echo "ERROR: theme.json not found\\n";
+}
 
-<!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column -->
-<div class="wp-block-column"><!-- wp:heading {"level":3} -->
-<h3>Beautiful Design</h3>
-<!-- /wp:heading -->
+// Check templates
+$templates_dir = $theme_dir . "/templates";
+if (is_dir($templates_dir)) {
+  echo "\\nTemplates found:\\n";
+  foreach (glob($templates_dir . "/*.html") as $tpl) {
+    $content = file_get_contents($tpl);
+    $basename = basename($tpl);
+    echo "  " . $basename . " (" . strlen($content) . " chars)\\n";
+    // Show first 200 chars of each template
+    echo "    preview: " . substr(str_replace("\\n", " ", $content), 0, 200) . "\\n";
+  }
+} else {
+  echo "ERROR: templates directory not found\\n";
+}
+`,
+      })
+      console.log('[Playground] Theme verification:\\n' + verifyResult.text)
 
-<!-- wp:paragraph -->
-<p>A carefully crafted design system with custom colors, fonts, and spacing.</p>
-<!-- /wp:paragraph --></div>
-<!-- /wp:column -->
+      // Seed sample content
+      console.log('[Playground] Seeding site options...')
+      const optResult = await client.run({
+        code: phpPrefix + `update_option('blogname', '${themeSlug.replace(/'/g, "\\'")} Preview'); update_option('blogdescription', 'Theme preview'); echo 'ok';`,
+      })
+      console.log('[Playground] Site options result:', optResult.text)
 
-<!-- wp:column -->
-<div class="wp-block-column"><!-- wp:heading {"level":3} -->
-<h3>Block Patterns</h3>
-<!-- /wp:heading -->
-
-<!-- wp:paragraph -->
-<p>Pre-built patterns for professional layouts.</p>
-<!-- /wp:paragraph --></div>
-<!-- /wp:column -->
-
-<!-- wp:column -->
-<div class="wp-block-column"><!-- wp:heading {"level":3} -->
-<h3>Fully Customizable</h3>
-<!-- /wp:heading -->
-
-<!-- wp:paragraph -->
-<p>Adjust everything through the WordPress Site Editor.</p>
-<!-- /wp:paragraph --></div>
-<!-- /wp:column --></div>
-<!-- /wp:columns -->',
-  'post_status' => 'publish',
-  'post_type' => 'page',
-));
-update_option('show_on_front', 'page');
-update_option('page_on_front', $front);
+      // Use "latest posts" as front page so WordPress renders index.html with query loop
+      console.log('[Playground] Setting up latest posts front page + creating sample posts...')
+      const postsResult = await client.run({
+        code: phpPrefix + `
+update_option('show_on_front', 'posts');
+delete_option('page_on_front');
 update_option('permalink_structure', '/%postname%/');
 flush_rewrite_rules();
 
-wp_insert_post(array('post_title'=>'Getting Started','post_content'=>'<!-- wp:paragraph --><p>Congratulations on your new WordPress theme! This post shows how blog content looks with your chosen typography and colors.</p><!-- /wp:paragraph -->','post_status'=>'publish'));
-wp_insert_post(array('post_title'=>'Exploring Block Patterns','post_content'=>'<!-- wp:paragraph --><p>Block patterns are pre-designed layouts you can insert into any page or post.</p><!-- /wp:paragraph -->','post_status'=>'publish'));
-wp_insert_post(array('post_title'=>'Customizing Your Design','post_content'=>'<!-- wp:paragraph --><p>Use the WordPress Site Editor to customize colors, typography, and layouts.</p><!-- /wp:paragraph -->','post_status'=>'publish'));
-
-$sample = wp_insert_post(array('post_title'=>'Sample Page','post_content'=>'<!-- wp:heading --><h2>About This Theme</h2><!-- /wp:heading --><!-- wp:paragraph --><p>This sample page demonstrates how your theme renders static page content.</p><!-- /wp:paragraph -->','post_status'=>'publish','post_type'=>'page'));
-$blog = wp_insert_post(array('post_title'=>'Blog','post_content'=>'','post_status'=>'publish','post_type'=>'page'));
-update_option('page_for_posts', $blog);
-echo 'done';
+wp_insert_post(array('post_title' => 'Getting Started with Your Theme', 'post_content' => '<!-- wp:paragraph --><p>This post demonstrates how your blog content looks with your chosen typography and colors. The layout you see is powered by the index.html template and its query loop block.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Try switching between the Desktop, Tablet, and Mobile viewport buttons above to see how the theme responds to different screen sizes.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
+wp_insert_post(array('post_title' => 'Exploring Block Patterns', 'post_content' => '<!-- wp:paragraph --><p>Block patterns are pre-designed layouts you can insert into any page or post. Your theme includes several custom patterns that match the design system.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Patterns save time by providing ready-made sections like hero areas, call-to-action blocks, and content grids.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
+wp_insert_post(array('post_title' => 'Customizing Your Design', 'post_content' => '<!-- wp:paragraph --><p>Use the WordPress Site Editor to customize colors, typography, and layouts. Everything is defined in theme.json and can be adjusted without writing code.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Your theme includes style variations for dark mode and high contrast that you can switch between in the Site Editor.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
+wp_insert_post(array('post_title' => 'Sample Page', 'post_content' => '<!-- wp:heading --><h2>About This Theme</h2><!-- /wp:heading --><!-- wp:paragraph --><p>This sample page demonstrates how your theme renders static page content with your block templates.</p><!-- /wp:paragraph -->', 'post_status' => 'publish', 'post_type' => 'page'));
+echo 'ok';
 `,
       })
+      console.log('[Playground] Posts/settings result:', postsResult.text)
 
+      console.log('[Playground] Navigating to / ...')
       await client.goTo('/')
+      console.log('[Playground] Navigation complete. Fetching rendered HTML...')
+
+      // Fetch the rendered front page HTML to check what's actually showing
+      const pageResult = await client.run({
+        code: phpPrefix + `
+$url = home_url('/');
+echo "Home URL: " . $url . "\\n";
+echo "show_on_front: " . get_option('show_on_front') . "\\n";
+echo "page_on_front: " . get_option('page_on_front') . "\\n";
+$front_id = get_option('page_on_front');
+if ($front_id) {
+  $post = get_post($front_id);
+  echo "Front page title: " . ($post ? $post->post_title : 'NOT FOUND') . "\\n";
+  echo "Front page status: " . ($post ? $post->post_status : 'N/A') . "\\n";
+  echo "Front page content length: " . ($post ? strlen($post->post_content) : 0) . " chars\\n";
+  echo "Front page content preview: " . ($post ? substr($post->post_content, 0, 300) : 'N/A') . "\\n";
+}
+`,
+      })
+      console.log('[Playground] Page state:\\n' + pageResult.text)
 
       clientRef.current = client
       setActivePage('front')
       setCurrentUrl('/')
       setStatus('active')
+      console.log('[Playground] === BOOT COMPLETE, status set to active ===')
     } catch (err) {
       console.error('Playground failed to load:', err)
       setStatus('error')

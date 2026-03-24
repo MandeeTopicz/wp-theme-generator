@@ -98,6 +98,19 @@ describe('buildTemplateFile', () => {
     expect(output).toContain(tpl.content)
   })
 
+  it('does NOT double-wrap when AI already includes template-part', () => {
+    const tpl: BlockTemplate = {
+      name: 'index',
+      title: 'Index',
+      content:
+        '<!-- wp:template-part {"slug":"header"} /-->\n<!-- wp:query /-->\n<!-- wp:template-part {"slug":"footer"} /-->',
+    }
+    const output = buildTemplateFile(tpl)
+    // Should return content as-is, not add extra header/footer
+    const headerCount = (output.match(/wp:template-part.*header/g) || []).length
+    expect(headerCount).toBe(1)
+  })
+
   it('does NOT wrap template parts', () => {
     const part: BlockTemplate = {
       name: 'header',

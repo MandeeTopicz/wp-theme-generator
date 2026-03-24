@@ -31,6 +31,7 @@ interface GenerationState {
   result: GenerateResult | null
   error: GenerateError | null
   generate: (body: GenerateBody) => void
+  reset: () => void
 }
 
 const GenerationContext = createContext<GenerationState | null>(null)
@@ -39,6 +40,12 @@ export function GenerationProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<GenerationStatus>('idle')
   const [result, setResult] = useState<GenerateResult | null>(null)
   const [error, setError] = useState<GenerateError | null>(null)
+
+  const reset = useCallback(() => {
+    setStatus('idle')
+    setResult(null)
+    setError(null)
+  }, [])
 
   const generate = useCallback((body: GenerateBody) => {
     setStatus('generating')
@@ -73,7 +80,7 @@ export function GenerationProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <GenerationContext.Provider value={{ status, result, error, generate }}>
+    <GenerationContext.Provider value={{ status, result, error, generate, reset }}>
       {children}
     </GenerationContext.Provider>
   )

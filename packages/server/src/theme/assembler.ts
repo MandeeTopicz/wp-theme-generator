@@ -3,12 +3,8 @@ import type {
   BlockTemplate,
   ColorPaletteEntry,
 } from '@wp-theme-gen/shared'
+import { getLuminance } from '@wp-theme-gen/shared'
 
-const SKIP_LINK = `<!-- wp:group {"className":"skip-link-wrapper","style":{"position":"absolute","left":"-9999px"}} -->
-<div class="wp-block-group skip-link-wrapper"><!-- wp:paragraph {"className":"skip-link"} -->
-<p class="skip-link"><a href="#main-content">Skip to content</a></p>
-<!-- /wp:paragraph --></div>
-<!-- /wp:group -->`
 
 export function buildStyleCSS(manifest: ThemeManifest): string {
   return `/*
@@ -37,12 +33,25 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
       postTypes: ['page', 'post'],
     }))
 
-  // Derive style colors from palette:
-  // First entry = background (typically darkest), last = text (typically lightest)
-  // If only one color, use it as background with white text
-  const bgSlug = colors[0]?.slug || 'base'
-  const textSlug = colors.length > 1 ? colors[colors.length - 1]!.slug : 'contrast'
-  const accentSlug = colors[Math.min(6, colors.length - 1)]?.slug || colors[0]?.slug || 'accent'
+  // Derive style colors from palette using luminance detection.
+  // Find the darkest color for background and lightest for text to guarantee contrast.
+  let bgSlug = 'base'
+  let textSlug = 'contrast'
+  let accentSlug = 'accent'
+
+  if (colors.length >= 2) {
+    const sorted = [...colors].sort(
+      (a, b) => getLuminance(a.color) - getLuminance(b.color),
+    )
+    bgSlug = sorted[0]!.slug
+    textSlug = sorted[sorted.length - 1]!.slug
+    // Pick a mid-luminance color as accent, or fall back to the second-brightest
+    const mid = Math.floor(sorted.length / 2)
+    accentSlug = sorted[mid]!.slug
+  } else if (colors.length === 1) {
+    bgSlug = colors[0]!.slug
+    textSlug = colors[0]!.slug
+  }
 
   const result = {
     $schema: 'https://schemas.wp.org/trunk/theme.json',
@@ -100,8 +109,13 @@ export function buildTemplateFile(template: BlockTemplate): string {
     return template.content
   }
 
-  return `${SKIP_LINK}
-<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+  // If the AI already included template-part references, return as-is
+  if (template.content.includes('wp:template-part')) {
+    return template.content
+  }
+
+  // Otherwise wrap with header/footer template parts
+  return `<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 ${template.content}
 <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->`
 }

@@ -52,6 +52,12 @@ generateRouter.post('/', async (req, res, next) => {
     const designSpec = await provider.generateDesignSpec(request)
     console.log('[generate] Pass 1 complete. Starting Pass 2: theme manifest...')
     const manifest = await provider.generateThemeManifest(request, designSpec)
+    // DEBUG: log the index template content
+    const indexTemplate = manifest.templates?.find(t => t.name === 'index' || t.name === 'index.html')
+    console.log('[DEBUG] index template content:', indexTemplate?.content?.substring(0, 500))
+    console.log('[DEBUG] header part content:', manifest.templateParts?.find(p => p.name === 'header')?.content?.substring(0, 300))
+    console.log('[DEBUG] template count:', manifest.templates?.length)
+    console.log('[DEBUG] colors:', manifest.colors?.map(c => c.slug))
     console.log('[generate] Pass 2 complete. Assembling theme...')
 
     // Patch manifest with user-supplied identity

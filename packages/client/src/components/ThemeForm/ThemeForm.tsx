@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGeneration } from '../../context/GenerationContext'
 import StepDescription from './StepDescription'
@@ -46,8 +46,12 @@ const initialState: FormState = {
 export default function ThemeForm() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialState)
-  const { generate, status } = useGeneration()
+  const { generate, status, reset } = useGeneration()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    reset()
+  }, [reset])
 
   function update(partial: Partial<FormState>) {
     setForm((prev) => ({ ...prev, ...partial }))

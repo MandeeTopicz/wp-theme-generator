@@ -21,27 +21,33 @@ export function assembleTheme(manifest: ThemeManifest): ThemeFileSet {
   const styleCss = buildStyleCSS(manifest)
   const themeJson = buildThemeJSON(manifest)
 
-  const templates = manifest.templates.map((t) => ({
-    name: t.name,
-    content: buildTemplateFile({
-      name: t.name.replace(/\.html$/, ''),
-      title: t.name.replace(/\.html$/, ''),
-      content: t.content,
-    }),
-  }))
+  const templates = manifest.templates.map((t) => {
+    const name = t.name.endsWith('.html') ? t.name : `${t.name}.html`
+    return {
+      name,
+      content: buildTemplateFile({
+        name: name.replace(/\.html$/, ''),
+        title: name.replace(/\.html$/, ''),
+        content: t.content,
+      }),
+    }
+  })
 
-  const parts = manifest.templateParts.map((p) => ({
-    name: p.name,
-    content: buildTemplateFile({
-      name: p.name.replace(/\.html$/, ''),
-      title: p.name.replace(/\.html$/, ''),
-      content: p.content,
-      isTemplatePart: true,
-    }),
-  }))
+  const parts = manifest.templateParts.map((p) => {
+    const name = p.name.endsWith('.html') ? p.name : `${p.name}.html`
+    return {
+      name,
+      content: buildTemplateFile({
+        name: name.replace(/\.html$/, ''),
+        title: name.replace(/\.html$/, ''),
+        content: p.content,
+        isTemplatePart: true,
+      }),
+    }
+  })
 
   const patterns = manifest.patterns.map((p) => ({
-    name: p.name,
+    name: p.name.endsWith('.php') ? p.name : `${p.name}.php`,
     content: buildPatternFile({
       title: p.name.replace(/\.php$/, '').replace(/(^|-)(\w)/g, (_m, sep: string, c: string) => (sep ? ' ' : '') + c.toUpperCase()),
       slug: `${manifest.slug}/${p.name.replace(/\.php$/, '')}`,
@@ -91,16 +97,19 @@ export async function createZip(
     archive.append(fileSet.themeJson, { name: `${root}/theme.json` })
 
     for (const tpl of fileSet.templates) {
-      archive.append(tpl.content, { name: `${root}/templates/${tpl.name}` })
+      const name = tpl.name.endsWith('.html') ? tpl.name : `${tpl.name}.html`
+      archive.append(tpl.content, { name: `${root}/templates/${name}` })
     }
 
     for (const part of fileSet.parts) {
-      archive.append(part.content, { name: `${root}/parts/${part.name}` })
+      const name = part.name.endsWith('.html') ? part.name : `${part.name}.html`
+      archive.append(part.content, { name: `${root}/parts/${name}` })
     }
 
     for (const pattern of fileSet.patterns) {
+      const name = pattern.name.endsWith('.php') ? pattern.name : `${pattern.name}.php`
       archive.append(pattern.content, {
-        name: `${root}/patterns/${pattern.name}`,
+        name: `${root}/patterns/${name}`,
       })
     }
 
