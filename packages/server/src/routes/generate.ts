@@ -75,7 +75,10 @@ generateRouter.post('/', async (req, res, next) => {
     }
 
     // Ensure templates array has at least index.html
-    if (!manifest.templates.some((t) => t.name === 'index.html')) {
+    const hasIndex = manifest.templates.some(
+      (t) => t.name === 'index' || t.name === 'index.html',
+    )
+    if (!hasIndex) {
       manifest.templates.unshift({
         name: 'index.html',
         content: '<!-- wp:paragraph --><p>Welcome</p><!-- /wp:paragraph -->',

@@ -114,97 +114,107 @@ export function buildPass1UserPrompt(request: GenerateRequest): string {
 export function buildPass2SystemPrompt(design: DesignSpec): string {
   const fileList = requiredFiles.map((f) => `  - ${f}`).join('\n')
 
-  return `You are a senior WordPress FSE theme developer generating a complete ThemeManifest.
+  // Extract color slugs for use in examples
+  const colors = design.colors ?? []
+  const darkest = colors[0]?.slug ?? 'primary'
+  const secondDarkest = colors[1]?.slug ?? colors[0]?.slug ?? 'primary'
+  const thirdDarkest = colors[2]?.slug ?? secondDarkest
+  const mid = colors[Math.floor(colors.length / 2)]?.slug ?? 'accent'
+  const accent = colors[Math.min(4, colors.length - 1)]?.slug ?? mid
+  const lightest = colors[colors.length - 1]?.slug ?? 'white'
 
-Design context (use these colors, fonts, layout):
+  return `You are an expert WordPress Full Site Editor theme developer. You generate complete, production-quality WordPress block themes. Your output must be a single valid JSON object matching the ThemeManifest schema. No prose, no markdown, no code fences.
+
+Design context:
 ${JSON.stringify({ colors: design.colors, typography: design.typography, layout: design.layout }, null, 2)}
 
 Design narrative: ${design.designNarrative}
 
 RULES:
-- Use ONLY core/ blocks (e.g. core/group, core/paragraph, core/cover, core/query, core/post-template, etc.)
-- NEVER use <!-- wp:html --> — use core/group with layout attributes instead
+- Use ONLY core/ blocks (core/group, core/paragraph, core/cover, core/query, core/post-template, etc.)
+- NEVER use <!-- wp:html -->
 - Always close block tags: <!-- wp:group -->...<!-- /wp:group -->
 - Self-closing is fine: <!-- wp:post-title /-->
 
-TEMPLATE STRUCTURE REQUIREMENTS:
+═══════════════════════════════════════════════════════
+CRITICAL COLOR USAGE RULE — READ THIS CAREFULLY
+═══════════════════════════════════════════════════════
 
-Each template must have meaningful block structure. Minimum requirements:
+Every block that has a background or text color MUST use the theme palette color slugs as block attributes. Never leave blocks without color attributes.
 
-index.html (homepage):
-- wp:cover or wp:group for hero section with heading and tagline
-- wp:query with wp:post-template containing wp:post-featured-image, wp:post-title, wp:post-excerpt
+CORRECT — block using theme colors:
+<!-- wp:cover {"overlayColor":"${darkest}","textColor":"${lightest}","minHeight":100,"minHeightUnit":"vh","isDark":true,"align":"full"} -->
 
-single.html (single post):
-- wp:post-featured-image
-- wp:group for post header with wp:post-title, wp:post-date, wp:post-author
-- wp:post-content
-- wp:group for post footer with wp:post-terms
+WRONG — block without theme colors:
+<!-- wp:cover {"minHeight":100,"minHeightUnit":"vh"} -->
 
-page.html:
-- wp:post-title
-- wp:post-featured-image
-- wp:post-content
+CORRECT — group block with background:
+<!-- wp:group {"backgroundColor":"${secondDarkest}","textColor":"${lightest}","align":"full","layout":{"type":"constrained"}} -->
 
-archive.html:
-- wp:query-title
-- wp:query with wp:post-template containing wp:post-featured-image, wp:post-title, wp:post-excerpt, wp:post-date
-- wp:query-pagination with previous/numbers/next
+WRONG — group block without colors:
+<!-- wp:group {"align":"full"} -->
 
-search.html:
-- wp:search block
-- wp:query for results with wp:post-template
-- wp:query-no-results with helpful message
+The color slugs from the DesignSpec palette are: ${colors.map((c) => c.slug).join(', ')}. Use them everywhere.
 
-404.html:
-- wp:heading with "Page Not Found"
-- wp:paragraph with helpful message
-- wp:search block
+═══════════════════════════════════════════════════════
+REQUIRED index.html STRUCTURE (minimum 800 characters)
+═══════════════════════════════════════════════════════
 
-NEVER generate a template with only wp:paragraph blocks.
+The index.html template MUST follow this structure, using the ACTUAL color slugs above:
 
-You MUST NOT output <!-- wp:html --> anywhere.
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
-REQUIRED EXAMPLE — index.html must look similar to this:
-
-<!-- wp:cover {"overlayColor":"primary","minHeight":100,"minHeightUnit":"vh","isDark":true,"align":"full"} -->
+<!-- wp:cover {"overlayColor":"${darkest}","isDark":true,"minHeight":90,"minHeightUnit":"vh","align":"full","style":{"spacing":{"padding":{"top":"0","bottom":"0"}}}} -->
 <div class="wp-block-cover alignfull">
+<div class="wp-block-cover__inner-container">
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
-<!-- wp:site-title {"level":1,"isLink":false} /-->
-<!-- wp:site-tagline /-->
-<!-- wp:buttons -->
+<!-- wp:site-title {"level":1,"isLink":false,"style":{"typography":{"fontStyle":"normal","fontWeight":"700"},"color":{"text":"var(--wp--preset--color--${lightest})"}}} /-->
+<!-- wp:site-tagline {"style":{"color":{"text":"var(--wp--preset--color--${mid})"}}} /-->
+<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"left"}} -->
 <div class="wp-block-buttons">
-<!-- wp:button -->
-<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">View Work</a></div>
+<!-- wp:button {"backgroundColor":"${accent}","textColor":"${lightest}","style":{"border":{"radius":"4px"}}} -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button">Explore</a></div>
 <!-- /wp:button -->
 </div>
 <!-- /wp:buttons -->
 </div>
 <!-- /wp:group -->
 </div>
+</div>
 <!-- /wp:cover -->
 
-<!-- wp:group {"align":"full","style":{"spacing":{"padding":{"top":"4rem","bottom":"4rem"}}},"layout":{"type":"constrained"}} -->
+<!-- wp:group {"backgroundColor":"${secondDarkest}","align":"full","style":{"spacing":{"padding":{"top":"4rem","bottom":"4rem"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group alignfull">
-<!-- wp:query {"queryId":1,"query":{"perPage":6,"postType":"post"}} -->
+<!-- wp:heading {"level":2,"textColor":"${lightest}","style":{"typography":{"fontStyle":"normal","fontWeight":"600"}}} -->
+<h2 class="wp-block-heading">Latest Posts</h2>
+<!-- /wp:heading -->
+<!-- wp:query {"queryId":1,"query":{"perPage":6,"postType":"post"},"layout":{"type":"default"}} -->
 <div class="wp-block-query">
-<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
-<!-- wp:post-featured-image {"isLink":true,"aspectRatio":"4/3"} /-->
-<!-- wp:post-title {"isLink":true,"level":3} /-->
-<!-- wp:post-excerpt {"moreText":""} /-->
-<!-- wp:post-date /-->
+<!-- wp:post-template {"style":{"spacing":{"blockGap":"2rem"}},"layout":{"type":"grid","columnCount":3}} -->
+<!-- wp:group {"style":{"border":{"radius":"8px"},"color":{"background":"var(--wp--preset--color--${thirdDarkest})"}},"layout":{"type":"flex","orientation":"vertical"}} -->
+<div class="wp-block-group">
+<!-- wp:post-featured-image {"isLink":true,"aspectRatio":"16/9","style":{"border":{"radius":"8px 8px 0 0"}}} /-->
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"1rem","right":"1rem","bottom":"1rem","left":"1rem"}}},"layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} -->
+<div class="wp-block-group">
+<!-- wp:post-title {"isLink":true,"level":3,"style":{"color":{"text":"var(--wp--preset--color--${lightest})"},"typography":{"fontStyle":"normal","fontWeight":"600"}}} /-->
+<!-- wp:post-excerpt {"moreText":"Read more","style":{"color":{"text":"var(--wp--preset--color--${mid})"},"typography":{"fontSize":"0.875rem"}}} /-->
+<!-- wp:post-date {"style":{"color":{"text":"var(--wp--preset--color--${mid})"},"typography":{"fontSize":"0.75rem"}}} /-->
+</div>
+<!-- /wp:group -->
+</div>
+<!-- /wp:group -->
 <!-- /wp:post-template -->
-<!-- wp:query-pagination -->
+<!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"center"}} -->
 <div class="wp-block-query-pagination">
-<!-- wp:query-pagination-previous /-->
+<!-- wp:query-pagination-previous {"label":"Previous"} /-->
 <!-- wp:query-pagination-numbers /-->
-<!-- wp:query-pagination-next /-->
+<!-- wp:query-pagination-next {"label":"Next"} /-->
 </div>
 <!-- /wp:query-pagination -->
 <!-- wp:query-no-results -->
 <div class="wp-block-query-no-results">
-<!-- wp:paragraph -->
+<!-- wp:paragraph {"style":{"color":{"text":"var(--wp--preset--color--${mid})"}}} -->
 <p>No posts found.</p>
 <!-- /wp:paragraph -->
 </div>
@@ -214,26 +224,48 @@ REQUIRED EXAMPLE — index.html must look similar to this:
 </div>
 <!-- /wp:group -->
 
-REQUIRED EXAMPLE — parts/header.html must look similar to this:
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
 
-<!-- wp:group {"tagName":"header","style":{"position":{"type":"sticky","top":"0px"}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->
+═══════════════════════════════════════════════════════
+REQUIRED header.html STRUCTURE
+═══════════════════════════════════════════════════════
+
+<!-- wp:group {"tagName":"header","backgroundColor":"${darkest}","style":{"position":{"type":"sticky","top":"0px"},"spacing":{"padding":{"top":"1rem","bottom":"1rem","left":"2rem","right":"2rem"}}},"layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between","verticalAlignment":"center"}} -->
 <header class="wp-block-group">
-<!-- wp:site-logo {"width":48} /-->
-<!-- wp:site-title /-->
-<!-- wp:navigation {"ariaLabel":"Main navigation","layout":{"type":"flex","justifyContent":"right"}} /-->
+<!-- wp:site-logo {"width":40,"isLink":true} /-->
+<!-- wp:site-title {"isLink":true,"style":{"color":{"text":"var(--wp--preset--color--${lightest})"},"typography":{"fontStyle":"normal","fontWeight":"700","fontSize":"1.25rem"}}} /-->
+<!-- wp:navigation {"textColor":"${lightest}","overlayBackgroundColor":"${darkest}","overlayTextColor":"${lightest}","ariaLabel":"Main navigation","style":{"typography":{"fontStyle":"normal","fontWeight":"500"}},"layout":{"type":"flex","justifyContent":"right","flexWrap":"nowrap"}} /-->
 </header>
 <!-- /wp:group -->
 
-CRITICAL: Every template must use real WordPress blocks for structure.
-NEVER generate a template that only contains wp:paragraph blocks.
-The index.html MUST contain wp:cover or wp:group for hero AND wp:query for posts.
-The header.html MUST contain wp:navigation.
-If you do not follow these examples, the theme preview will be blank.
+═══════════════════════════════════════════════════════
+ADDITIONAL TEMPLATE REQUIREMENTS
+═══════════════════════════════════════════════════════
+
+single.html: wp:post-featured-image, wp:group with wp:post-title + wp:post-date + wp:post-author, wp:post-content, wp:post-terms. ALL with backgroundColor/textColor attributes using palette slugs.
+
+page.html: wp:post-title, wp:post-featured-image, wp:post-content. Use backgroundColor/textColor.
+
+archive.html: wp:query-title, wp:query with wp:post-template, wp:query-pagination. Use backgroundColor/textColor.
+
+search.html: wp:search, wp:query for results, wp:query-no-results. Use backgroundColor/textColor.
+
+404.html: wp:heading "Page Not Found", wp:paragraph, wp:search. Use backgroundColor/textColor.
+
+footer.html: wp:group with backgroundColor="${darkest}", containing wp:paragraph with site credit and wp:social-links.
+
+EVERY template and template part MUST use color attributes from the palette. NEVER omit colors.
+
+═══════════════════════════════════════════════════════
+DESIGN ADAPTATION
+═══════════════════════════════════════════════════════
+
+Adapt these templates to match the design narrative and site type. Do NOT copy examples verbatim. Use the actual color slugs: ${colors.map((c) => c.slug).join(', ')}. Choose appropriate hero content, heading text, and layout that fits the described site. For light themes, swap dark/light color assignments.
 
 Required output schema:
 ${THEME_MANIFEST_SCHEMA}
 
-Required files that must appear in the output:
+Required files:
 ${fileList}
 
 Return ONLY valid JSON matching the ThemeManifest interface. No prose, no markdown, no code fences.`
@@ -260,7 +292,7 @@ Generate these files:
 - templateParts: header.html, footer.html
 - patterns: hero.php, cta.php, query-loop.php
 
-Keep each template's block markup between 5-20 lines of block comments. Use self-closing blocks like <!-- wp:post-title /-->.
+Each template must be substantial — at least 800 characters of block markup. Use self-closing blocks like <!-- wp:post-title /-->. Every block MUST have color attributes using the palette slugs.
 
 Return ONLY the JSON object, nothing else.`
 }

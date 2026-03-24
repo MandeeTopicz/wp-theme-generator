@@ -76,24 +76,45 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
         wideSize,
       },
     },
-    styles: {
-      color: {
-        background: `var(--wp--preset--color--${bgSlug})`,
-        text: `var(--wp--preset--color--${textSlug})`,
-      },
-      elements: {
-        link: {
+    // Use AI-generated styles if available (richer, with elements/blocks overrides),
+    // otherwise fall back to luminance-derived styles
+    styles: (manifest.themeJson && typeof manifest.themeJson === 'object' && 'styles' in (manifest.themeJson as Record<string, unknown>))
+      ? (manifest.themeJson as Record<string, unknown>).styles as Record<string, unknown>
+      : {
           color: {
-            text: `var(--wp--preset--color--${accentSlug})`,
-          },
-        },
-        heading: {
-          color: {
+            background: `var(--wp--preset--color--${bgSlug})`,
             text: `var(--wp--preset--color--${textSlug})`,
           },
+          elements: {
+            link: {
+              color: {
+                text: `var(--wp--preset--color--${accentSlug})`,
+              },
+            },
+            heading: {
+              color: {
+                text: `var(--wp--preset--color--${textSlug})`,
+              },
+            },
+            button: {
+              color: {
+                background: `var(--wp--preset--color--${accentSlug})`,
+                text: `var(--wp--preset--color--${textSlug})`,
+              },
+              border: {
+                radius: '4px',
+              },
+            },
+          },
+          blocks: {
+            'core/navigation': {
+              color: { text: `var(--wp--preset--color--${textSlug})` },
+            },
+            'core/post-title': {
+              color: { text: `var(--wp--preset--color--${textSlug})` },
+            },
+          },
         },
-      },
-    },
     templateParts: [
       { name: 'header', area: 'header', title: 'Header' },
       { name: 'footer', area: 'footer', title: 'Footer' },

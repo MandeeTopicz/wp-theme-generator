@@ -167,15 +167,21 @@ if (is_dir($templates_dir)) {
       })
       console.log('[Playground] Site options result:', optResult.text)
 
-      // Use "latest posts" as front page so WordPress renders index.html with query loop
-      console.log('[Playground] Setting up latest posts front page + creating sample posts...')
+      // Delete default WP content that interferes with theme preview, then set up latest posts
+      console.log('[Playground] Deleting defaults + setting up latest posts + creating sample posts...')
       const postsResult = await client.run({
         code: phpPrefix + `
+// Delete default WordPress content
+wp_delete_post(1, true); // Delete "Hello world!" post
+wp_delete_post(2, true); // Delete "Sample Page"
+
+// Use latest posts as front page so index.html template renders with query loop
 update_option('show_on_front', 'posts');
 delete_option('page_on_front');
 update_option('permalink_structure', '/%postname%/');
 flush_rewrite_rules();
 
+// Create sample posts that will appear in the query loop
 wp_insert_post(array('post_title' => 'Getting Started with Your Theme', 'post_content' => '<!-- wp:paragraph --><p>This post demonstrates how your blog content looks with your chosen typography and colors. The layout you see is powered by the index.html template and its query loop block.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Try switching between the Desktop, Tablet, and Mobile viewport buttons above to see how the theme responds to different screen sizes.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
 wp_insert_post(array('post_title' => 'Exploring Block Patterns', 'post_content' => '<!-- wp:paragraph --><p>Block patterns are pre-designed layouts you can insert into any page or post. Your theme includes several custom patterns that match the design system.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Patterns save time by providing ready-made sections like hero areas, call-to-action blocks, and content grids.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
 wp_insert_post(array('post_title' => 'Customizing Your Design', 'post_content' => '<!-- wp:paragraph --><p>Use the WordPress Site Editor to customize colors, typography, and layouts. Everything is defined in theme.json and can be adjusted without writing code.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Your theme includes style variations for dark mode and high contrast that you can switch between in the Site Editor.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));

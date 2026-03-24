@@ -186,15 +186,22 @@ export function parseThemeManifest(raw: string): ThemeManifest {
 
   const manifest = result.data as ThemeManifest
 
-  // Validate index template has sufficient content
+  // Validate index template has sufficient content and required blocks
   const indexTemplate = manifest.templates?.find(
     (t) => t.name === 'index' || t.name === 'index.html',
   )
-  if (indexTemplate && indexTemplate.content.length < 400) {
-    throw new ParseError(
-      `index template is too thin (${indexTemplate.content.length} chars). Must contain wp:cover or wp:group hero AND wp:query loop. Current content: ${indexTemplate.content}`,
-      raw,
-    )
+  if (indexTemplate) {
+    const content = indexTemplate.content
+    const hasStructure =
+      content.includes('wp:cover') ||
+      content.includes('wp:query') ||
+      (content.includes('wp:group') && content.length > 300)
+    if (content.length < 800 || !hasStructure) {
+      throw new ParseError(
+        `index template is too thin (${content.length} chars, hasStructure=${hasStructure}). Must contain wp:cover or wp:group hero AND wp:query loop with color attributes. Current content: ${content.slice(0, 200)}`,
+        raw,
+      )
+    }
   }
 
   return manifest
