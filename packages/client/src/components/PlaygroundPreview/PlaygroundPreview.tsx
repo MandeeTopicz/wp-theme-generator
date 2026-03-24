@@ -17,12 +17,6 @@ type Page = 'front' | 'blog' | 'sample'
 
 const REMOTE_URL = 'https://playground.wordpress.net/remote.html'
 
-const viewportWidths: Record<Viewport, string> = {
-  mobile: '375px',
-  tablet: '768px',
-  desktop: '100%',
-}
-
 const pagePaths: Record<Page, string> = {
   front: '/',
   blog: '/blog/',
@@ -265,10 +259,10 @@ echo 'done';
 
       {/* Browser chrome + iframe wrapper — single iframe persists across loading and active */}
       {showIframe && (
-        <div className="flex-1 flex flex-col bg-bg0 rounded-xl border border-border2 overflow-hidden m-4">
-          {/* Loading overlay — covers the iframe while Playground boots */}
+        <div className="relative flex-1 flex flex-col bg-bg0 rounded-xl border border-border2 overflow-hidden m-4">
+          {/* Loading overlay — fully opaque, unmounted when not loading */}
           {status === 'loading' && (
-            <div className="absolute inset-0 z-10 m-4 rounded-xl bg-bg1 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 z-10 rounded-xl bg-bg1 flex flex-col items-center justify-center">
               <div className="w-10 h-10 mb-6 border-2 border-border border-t-accent rounded-full animate-spin" />
               <div className="space-y-3 w-full max-w-xs">
                 {loadingSteps.map((step, i) => {
@@ -305,9 +299,9 @@ echo 'done';
             </div>
           )}
 
-          {/* Updating overlay — subtle overlay during theme reload */}
+          {/* Updating overlay — semi-transparent, unmounted when not updating */}
           {status === 'updating' && (
-            <div className="absolute inset-0 z-10 m-4 rounded-xl bg-bg1/80 flex items-center justify-center backdrop-blur-sm">
+            <div className="absolute inset-0 z-10 rounded-xl bg-bg1/80 flex items-center justify-center backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 border-2 border-border border-t-accent rounded-full animate-spin" />
                 <span className="text-text1 text-sm">Updating preview...</span>
@@ -315,9 +309,9 @@ echo 'done';
             </div>
           )}
 
-          {/* Browser toolbar — visible when active or updating */}
+          {/* Browser toolbar — always full width, visible when active or updating */}
           {(status === 'active' || status === 'updating') && (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-bg1 border-b border-border">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-bg1 border-b border-border shrink-0">
               <TrafficLights />
 
               <div className="flex-1 flex items-center gap-2 bg-bg3 rounded-md px-3 py-1.5">
@@ -386,14 +380,20 @@ echo 'done';
             </div>
           )}
 
-          {/* Single iframe — persists across loading and active states */}
-          <div className="flex-1 overflow-hidden flex justify-center bg-white" style={{ minHeight: '500px' }}>
+          {/* Iframe container — responsive viewport with dark surround for narrow viewports */}
+          <div
+            className="flex-1 overflow-hidden flex justify-center items-start"
+            style={{
+              background: viewport === 'desktop' ? '#ffffff' : '#060608',
+              minHeight: '500px',
+            }}
+          >
             <iframe
               ref={iframeRef}
               title="WordPress Playground"
-              className="border-0 transition-[width] duration-300"
+              className="border-0 shrink-0 transition-[width] duration-300"
               style={{
-                width: viewportWidths[viewport],
+                width: viewport === 'desktop' ? '100%' : viewport === 'tablet' ? '768px' : '375px',
                 height: '100%',
               }}
             />
@@ -401,7 +401,7 @@ echo 'done';
 
           {/* Powered by bar */}
           {(status === 'active' || status === 'updating') && (
-            <div className="flex items-center justify-center gap-1.5 py-1.5 bg-bg1 border-t border-border">
+            <div className="flex items-center justify-center gap-1.5 py-1.5 bg-bg1 border-t border-border shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-green" />
               <span className="text-text3 text-[10px]">
                 Powered by WordPress Playground
