@@ -13,6 +13,11 @@ Built as an Automattic coding challenge submission, this project explores how ge
 - **Zero `wp:html` blocks** — enforced by a stack-based block markup validator that catches nesting errors, forbidden blocks, and invalid attributes
 - **3 style variations per theme** — dark mode, high-contrast (WCAG AA), and an AI-designed variation named after the design narrative
 - **Download as installable ZIP** — drop it into any WordPress 6.0+ site via Appearance > Themes > Upload
+- **8 preset color palettes** — choose from Obsidian, Atelier, Nordic, Forest, Dusk, Ember, Linen, or Midnight, with full per-color customization
+- **SSE streaming generation** — real-time progress updates as each phase completes (design spec, templates, validation, packaging), no more blank spinners
+- **Prompt suggestion pills** — one-click preset descriptions for 7 site types (Photography, Boutique Store, Writer, Agency, Music, Documentation, Recipe Blog)
+- **Hero style wireframe previews** — visual SVG diagrams showing Full Width, Split, Minimal, and None layout options before generating
+- **120 tests passing** — unit tests covering validators, assembler, packager, AI layer, routes, and client routing
 
 ## Prerequisites
 
@@ -52,8 +57,8 @@ pnpm lint          # ESLint across all packages
 
 The test suite covers:
 
-- **packages/shared** (49 tests) — theme slug validation, theme.json schema validation, block markup nesting/allowlist/forbidden-block checks, query loop validation, color contrast ratio calculations, and the top-level `validateTheme` orchestrator
-- **packages/server** (64 tests) — theme assembler (style.css generation, theme.json with styles block, template wrapping, pattern PHP headers, style variations), ZIP packager (archive structure, file contents), AI layer (prompt builder, output parser with JSON extraction, provider interface, Anthropic retry/backoff logic), Express routes (generate, download, iterate, validate endpoints), middleware (error handler, rate limiter, sanitizer)
+- **packages/shared** (50 tests) — theme slug validation, theme.json schema validation, block markup nesting/allowlist/forbidden-block checks, query loop validation, color contrast ratio calculations, required file path normalization, and the top-level `validateTheme` orchestrator
+- **packages/server** (66 tests) — theme assembler (style.css generation, theme.json with styles block, template wrapping, no-double-wrap detection, pattern PHP headers, style variations), ZIP packager (archive structure, file contents), AI layer (prompt builder, output parser with JSON extraction and minimum content validation, provider interface, Anthropic retry/backoff logic), Express routes (SSE streaming generate, download, iterate, validate endpoints), middleware (error handler, rate limiter, sanitizer)
 - **packages/client** (4 tests) — hook exports, App module structure, ThemeForm module structure, routing configuration
 
 ## Architecture
@@ -71,11 +76,11 @@ packages/
 
 **packages/server** is an Express API with four routes: `POST /api/generate` (two-pass AI generation + assembly + ZIP), `POST /api/iterate` (AI-powered theme modification), `POST /api/validate` (standalone validation), and `GET /api/download/:sessionId` (ZIP delivery). The AI layer defines a provider interface (`AIProvider`) with a factory function that reads `AI_PROVIDER` from the environment, making provider swaps a config change. The theme assembler builds `style.css`, `theme.json` (with styles block for proper background/text colors), template files (with skip-link + header/footer parts), pattern files (with PHP registration headers), and style variations.
 
-**packages/client** is a React 18 + Vite app with Tailwind CSS. The multi-step form wizard collects theme requirements across 5 steps (description, identity, typography, layout, review). On submit, it navigates immediately to the result page (no waiting for the API) where a generation context tracks progress. The result page has a two-panel layout: left sidebar (file tree, download, iterate chat, validation summary) and main content area with tabs (Live Preview via WordPress Playground, Design System, Validation). Files can be inspected in a slide-over panel with syntax highlighting and diff view after iterations.
+**packages/client** is a React 18 + Vite app with Tailwind CSS. The multi-step form wizard collects theme requirements across 6 steps (description, identity, color palette, typography, layout, review). On submit, it navigates immediately to the result page (no waiting for the API) where a generation context tracks progress. The result page has a two-panel layout: left sidebar (file tree, download, iterate chat, validation summary) and main content area with tabs (Live Preview via WordPress Playground, Design System, Validation). Files can be inspected in a slide-over panel with syntax highlighting and diff view after iterations.
 
 ### Generation Pipeline
 
-User input flows through a 5-step form that collects site description, theme name/slug, color preferences, typography choices, and layout options. On submit, the server runs **Pass 1**: a Claude prompt that produces a design specification — a JSON object containing color palette (with semantic names), font families, spacing scale, and a design narrative that describes the aesthetic in evocative language. This narrative is the key to non-generic output.
+User input flows through a 6-step form that collects site description, theme name/slug, color palette selection, typography choices, layout options, and a review step. On submit, the server runs **Pass 1**: a Claude prompt that produces a design specification — a JSON object containing color palette (with semantic names), font families, spacing scale, and a design narrative that describes the aesthetic in evocative language. This narrative is the key to non-generic output.
 
 **Pass 2** receives the design spec as context along with the full `CORE_BLOCKS` allowlist, block markup examples, and the `ThemeManifest` JSON schema. Claude generates the complete manifest: all templates (`index.html`, `single.html`, `page.html`, `404.html`, `search.html`, `archive.html`), template parts (`header.html`, `footer.html`), patterns, and color/typography definitions.
 
@@ -88,6 +93,7 @@ The manifest is then validated (slug format, theme.json schema, block markup nes
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
 | `PORT` | No | Server port (default 3001) |
 | `AI_PROVIDER` | No | AI provider: `anthropic` / `openai` / `local` (default `anthropic`) |
+| `CLAUDE_MODEL` | No | Claude model ID (default `claude-sonnet-4-5-20250514`) |
 
 ## Known Limitations
 
@@ -98,3 +104,6 @@ The manifest is then validated (slug format, theme.json schema, block markup nes
 - **Rate limited to 5 generations per 15 minutes per IP** — this is a safety measure for the API cost; production deployment would need a proper job queue
 - **The iteration feature regenerates affected files** but cannot do fine-grained block-level edits — asking to "change the heading font size in the hero pattern" will regenerate the entire pattern file, not surgically edit one attribute
 - **Font loading depends on system/Google Fonts availability** — generated themes reference font families by name but don't bundle font files; WordPress handles loading via theme.json font-face declarations in production
+- **Generation can take 60-120 seconds** for Pass 2 (large theme manifests) — SSE streaming keeps the connection alive but patience is required
+- **WordPress Playground requires a modern browser** with WebAssembly support and boots in 15-30 seconds on first load
+- **Color palette customization informs the AI** but the model may occasionally use slightly different shades than the exact hex values provided

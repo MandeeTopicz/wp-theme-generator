@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
+    "@google/generative-ai": "^0.24.1",
     "@wp-theme-gen/shared": "workspace:*",
     "archiver": "^7.0.1",
     "cors": "^2.8.5",

@@ -6,6 +6,7 @@ import type {
   ThemeLayout,
 } from '@wp-theme-gen/shared'
 import { AnthropicProvider } from './anthropic'
+import { GeminiProvider } from './gemini'
 
 export interface DesignSpec {
   name: string
@@ -42,6 +43,10 @@ export function createAIProvider(
   options: CreateAIProviderOptions = {},
 ): AIProvider {
   const provider = options.provider ?? process.env.AI_PROVIDER ?? 'anthropic'
+
+  if (provider === 'gemini') {
+    return new GeminiProvider(options.apiKey)
+  }
 
   if (provider === 'openai') {
     throw new Error('OpenAI provider not yet implemented')
