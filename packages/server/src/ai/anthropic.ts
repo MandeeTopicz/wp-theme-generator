@@ -33,19 +33,26 @@ export class AnthropicProvider implements AIProvider {
   async generateDesignSpec(request: GenerateRequest): Promise<DesignSpec> {
     const system = buildPass1SystemPrompt()
     const userPrompt = buildPass1UserPrompt(request)
+    console.log('[pass1] Sending to Claude (%d char system, %d char user prompt)', system.length, userPrompt.length)
 
     let lastError: Error | undefined
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (attempt > 0) console.log('[pass1] Retry attempt %d...', attempt + 1)
+      const t0 = Date.now()
       const content = await this.callAPI(
         system,
         attempt === 0
           ? userPrompt
           : `${userPrompt}\n\nPrevious attempt failed: ${lastError?.message}. Please fix and return valid JSON.`,
       )
+      console.log('[pass1] Claude responded in %ds (%d chars)', ((Date.now() - t0) / 1000).toFixed(1), content.length)
       try {
-        return parseDesignSpec(content)
+        const spec = parseDesignSpec(content)
+        console.log('[pass1] Parsed design spec: %s (%d colors, narrative: %d chars)', spec.name, spec.colors?.length ?? 0, spec.designNarrative?.length ?? 0)
+        return spec
       } catch (err) {
         if (err instanceof ParseError) {
+          console.log('[pass1] Parse failed: %s', err.message.slice(0, 120))
           lastError = err
           continue
         }
@@ -61,6 +68,7 @@ export class AnthropicProvider implements AIProvider {
   ): Promise<ThemeManifest> {
     const system = buildPass2SystemPrompt(design)
     const userPrompt = buildPass2UserPrompt(request, design)
+    console.log('[pass2] Sending to Claude (%d char system, %d char user prompt)', system.length, userPrompt.length)
 
     let lastError: Error | undefined
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -98,11 +106,22 @@ ${userPrompt}`
         }
         console.log(`[generate] Retrying Pass 2 (attempt ${attempt + 1}): ${lastError.message.slice(0, 100)}`)
       }
+      const t0 = Date.now()
       const content = await this.callAPI(system, retryPrompt)
+      console.log('[pass2] Claude responded in %ds (%d chars)', ((Date.now() - t0) / 1000).toFixed(1), content.length)
       try {
-        return parseThemeManifest(content)
+        const manifest = parseThemeManifest(content)
+        const indexTpl = manifest.templates?.find((t) => t.name === 'index' || t.name === 'index.html')
+        console.log('[pass2] Parsed manifest: %d templates, %d parts, %d patterns, index=%d chars',
+          manifest.templates?.length ?? 0,
+          manifest.templateParts?.length ?? 0,
+          manifest.patterns?.length ?? 0,
+          indexTpl?.content?.length ?? 0,
+        )
+        return manifest
       } catch (err) {
         if (err instanceof ParseError) {
+          console.log('[pass2] Parse failed: %s', err.message.slice(0, 150))
           lastError = err
           continue
         }
@@ -132,14 +151,21 @@ ${userPrompt}`
     let lastError: Error | undefined
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
+        console.log('[api] Calling Claude %s (attempt %d, %d system + %d user chars)', MODEL, attempt + 1, system.length, userPrompt.length)
+        const t0 = Date.now()
         const response = await this.client.messages.create({
           model: MODEL,
           max_tokens: 32000,
           system,
           messages: [{ role: 'user', content: userPrompt }],
         })
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
+        console.log('[api] Response: stop=%s, %d content blocks, %ds', response.stop_reason, response.content.length, elapsed)
+        if (response.usage) {
+          console.log('[api] Tokens: input=%d, output=%d', response.usage.input_tokens, response.usage.output_tokens)
+        }
         if (response.stop_reason === 'max_tokens') {
-          console.warn('Response truncated (max_tokens reached). Retrying may help.')
+          console.warn('[api] WARNING: Response truncated (max_tokens reached)')
         }
         const block = response.content[0]
         if (block.type === 'text') {

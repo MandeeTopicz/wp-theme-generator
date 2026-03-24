@@ -60,6 +60,7 @@ export default function ThemeForm() {
   }
 
   function handleSubmit() {
+    console.log('[ThemeForm] Submit triggered, step:', step, 'themeName:', form.themeName, 'themeSlug:', form.themeSlug, 'descLen:', form.description.length)
     generate({
       description: form.description,
       siteType: form.siteType,

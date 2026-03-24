@@ -63,13 +63,45 @@ const validBody = {
   themeSlug: 'test-theme',
 }
 
+function parseSSEText(text: string): { event: string; data: unknown }[] {
+  const events: { event: string; data: unknown }[] = []
+  for (const block of text.split('\n\n')) {
+    if (!block.trim()) continue
+    let event = 'message'
+    let dataStr = ''
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event: ')) event = line.slice(7)
+      else if (line.startsWith('data: ')) dataStr = line.slice(6)
+    }
+    if (dataStr) {
+      try { events.push({ event, data: JSON.parse(dataStr) }) } catch { /* skip */ }
+    }
+  }
+  return events
+}
+
 describe('POST /api/generate', () => {
-  it('returns 200 with sessionId for valid body', async () => {
-    const res = await request(app).post('/api/generate').send(validBody)
+  it('returns SSE stream with progress and complete events', async () => {
+    const res = await request(app)
+      .post('/api/generate')
+      .send(validBody)
+      .buffer(true)
+      .parse((r, cb) => {
+        let data = ''
+        r.setEncoding('utf-8')
+        r.on('data', (chunk: string) => { data += chunk })
+        r.on('end', () => cb(null, data))
+      })
     expect(res.status).toBe(200)
-    expect(res.body).toHaveProperty('sessionId')
-    expect(res.body).toHaveProperty('manifest')
-    expect(res.body).toHaveProperty('validationResult')
+    const events = parseSSEText(res.body as unknown as string)
+    const progressEvents = events.filter((e) => e.event === 'progress')
+    const completeEvents = events.filter((e) => e.event === 'complete')
+    expect(progressEvents.length).toBeGreaterThanOrEqual(1)
+    expect(completeEvents).toHaveLength(1)
+    const complete = completeEvents[0]!.data as { sessionId: string; manifest: unknown; validationResult: unknown }
+    expect(complete).toHaveProperty('sessionId')
+    expect(complete).toHaveProperty('manifest')
+    expect(complete).toHaveProperty('validationResult')
   })
 
   it('returns 400 with suggestion for invalid slug', async () => {
@@ -98,9 +130,20 @@ describe('POST /api/generate', () => {
 
 describe('GET /api/download/:sessionId', () => {
   it('returns ZIP binary for valid sessionId', async () => {
-    // First generate to get a sessionId
-    const genRes = await request(app).post('/api/generate').send(validBody)
-    const { sessionId } = genRes.body
+    // First generate to get a sessionId (SSE response)
+    const genRes = await request(app)
+      .post('/api/generate')
+      .send(validBody)
+      .buffer(true)
+      .parse((r, cb) => {
+        let data = ''
+        r.setEncoding('utf-8')
+        r.on('data', (chunk: string) => { data += chunk })
+        r.on('end', () => cb(null, data))
+      })
+    const events = parseSSEText(genRes.body as unknown as string)
+    const complete = events.find((e) => e.event === 'complete')
+    const { sessionId } = complete!.data as { sessionId: string }
 
     const res = await request(app).get(`/api/download/${sessionId}`)
     expect(res.status).toBe(200)

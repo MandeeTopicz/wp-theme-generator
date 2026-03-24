@@ -9,7 +9,7 @@ import { createAIProvider } from '../ai/provider'
 import { assembleTheme, createZip } from '../theme/packager'
 
 const generateSchema = z.object({
-  description: z.string().min(1),
+  description: z.string().min(1).max(1000),
   siteType: z.enum(['blog', 'portfolio', 'business', 'store', 'docs']),
   targetAudience: z.string().optional(),
   colorMode: z.enum(['light', 'dark', 'auto']).optional(),
@@ -49,37 +49,43 @@ generateRouter.post('/', async (req, res, next) => {
       return
     }
 
+    // Set up SSE headers to keep connection alive during long generation
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.flushHeaders()
+
+    const send = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+    }
+
     const provider = createAIProvider()
     const { colorPalette } = parsed.data
     const request = { prompt: description, description, siteType, targetAudience, colorMode, accentColor, colorPalette }
 
+    send('progress', { step: 'design', message: 'Designing color system...' })
     console.log('[generate] Starting Pass 1: design spec...')
     const designSpec = await provider.generateDesignSpec(request)
-    console.log('[generate] Pass 1 complete. Starting Pass 2: theme manifest...')
+    console.log('[generate] Pass 1 complete.')
+
+    send('progress', { step: 'templates', message: 'Generating templates...' })
+    console.log('[generate] Starting Pass 2: theme manifest...')
     const manifest = await provider.generateThemeManifest(request, designSpec)
-    // DEBUG: log full template content
-    console.log('[DEBUG] template names:', manifest.templates?.map(t => t.name))
-    console.log('[DEBUG] templatePart names:', manifest.templateParts?.map(p => p.name))
-    console.log('[DEBUG] pattern names:', manifest.patterns?.map(p => p.name))
-    console.log('[DEBUG] colors:', manifest.colors?.map(c => `${c.slug}=${c.color}`))
-    const indexTpl = manifest.templates?.find(t => t.name === 'index' || t.name === 'index.html')
-    console.log('[DEBUG] Full index template:\n' + (indexTpl?.content ?? 'NOT FOUND'))
-    const headerPart = manifest.templateParts?.find(p => p.name === 'header' || p.name === 'header.html')
-    console.log('[DEBUG] Full header part:\n' + (headerPart?.content ?? 'NOT FOUND'))
-    console.log('[generate] Pass 2 complete. Assembling theme...')
+    console.log('[generate] Pass 2 complete.')
+
+    send('progress', { step: 'validating', message: 'Validating theme...' })
 
     // Patch manifest with user-supplied identity
     manifest.name = themeName
     manifest.slug = themeSlug
 
-    // Ensure themeJson is valid
     if (!manifest.themeJson || typeof manifest.themeJson !== 'object') {
       manifest.themeJson = { version: 3 }
     } else if ((manifest.themeJson as Record<string, unknown>).version !== 3) {
       (manifest.themeJson as Record<string, unknown>).version = 3
     }
 
-    // Ensure templates array has at least index.html
     const hasIndex = manifest.templates.some(
       (t) => t.name === 'index' || t.name === 'index.html',
     )
@@ -90,7 +96,6 @@ generateRouter.post('/', async (req, res, next) => {
       })
     }
 
-    // Build the files array from actual content
     manifest.files = [
       'style.css',
       'theme.json',
@@ -99,8 +104,11 @@ generateRouter.post('/', async (req, res, next) => {
       ...manifest.patterns.map((p) => `patterns/${p.name}`),
     ]
 
-    // Validate — return result but don't block on warnings-only failures
     const validationResult = validateTheme(manifest)
+    console.log('[generate] Validation: %s (%d errors, %d warnings)', validationResult.isValid ? 'PASS' : 'FAIL', validationResult.errors.length, validationResult.warnings.length)
+
+    send('progress', { step: 'packaging', message: 'Packaging theme...' })
+    console.log('[generate] Assembling and packaging...')
 
     const fileSet = assembleTheme(manifest)
     const zipBuffer = await createZip(manifest, fileSet)
@@ -113,8 +121,17 @@ generateRouter.post('/', async (req, res, next) => {
       JSON.stringify(manifest),
     )
 
-    res.json({ sessionId, manifest, validationResult })
+    console.log('[generate] Complete. sessionId=%s, ZIP=%d bytes', sessionId, zipBuffer.length)
+    send('complete', { sessionId, manifest, validationResult })
+    res.end()
   } catch (err) {
-    next(err)
+    // If headers already sent (SSE mode), send error event then end
+    if (res.headersSent) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      res.write(`event: error\ndata: ${JSON.stringify({ error: true, code: 'GENERATION_ERROR', message })}\n\n`)
+      res.end()
+    } else {
+      next(err)
+    }
   }
 })

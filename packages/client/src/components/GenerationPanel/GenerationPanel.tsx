@@ -1,21 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useGeneration } from '../../context/GenerationContext'
 
 const STEPS = [
-  { label: 'Designing color system...', sublabel: 'Pass 1' },
-  { label: 'Generating templates...', sublabel: 'Pass 2' },
-  { label: 'Building patterns...', sublabel: 'Pass 3' },
-  { label: 'Packaging theme...', sublabel: 'Pass 4' },
+  { key: 'design', label: 'Designing color system...', sublabel: 'Pass 1' },
+  { key: 'templates', label: 'Generating templates...', sublabel: 'Pass 2' },
+  { key: 'validating', label: 'Validating theme...', sublabel: 'Checking' },
+  { key: 'packaging', label: 'Packaging theme...', sublabel: 'ZIP' },
 ]
 
 export default function GenerationPanel() {
-  const [activeStep, setActiveStep] = useState(0)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveStep((s) => (s < STEPS.length - 1 ? s + 1 : s))
-    }, 8000)
-    return () => clearInterval(interval)
-  }, [])
+  const { step: currentStep } = useGeneration()
+  const activeIndex = STEPS.findIndex((s) => s.key === currentStep)
 
   return (
     <div className="max-w-md mx-auto py-20">
@@ -28,10 +22,10 @@ export default function GenerationPanel() {
       <div className="space-y-3">
         {STEPS.map((step, i) => {
           const status =
-            i < activeStep ? 'complete' : i === activeStep ? 'active' : 'pending'
+            i < activeIndex ? 'complete' : i === activeIndex ? 'active' : 'pending'
           return (
             <div
-              key={step.label}
+              key={step.key}
               className="animate-fade-up"
               style={{ animationDelay: `${i * 200}ms`, opacity: 0 }}
             >
