@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { ThemeManifest } from '@wp-theme-gen/shared'
+import type { CopyStrings } from '@wp-theme-gen/shared'
 import type { DesignSpec } from './provider'
 
 export class ParseError extends Error {
@@ -17,6 +17,25 @@ const colorPaletteEntrySchema = z.object({
   name: z.string(),
   slug: z.string(),
   color: z.string(),
+}).passthrough()
+
+const featureItemSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+})
+
+const copyStringsSchema = z.object({
+  heroHeading: z.string().optional(),
+  heroSubheading: z.string().optional(),
+  ctaHeading: z.string().optional(),
+  ctaDescription: z.string().optional(),
+  ctaButtonText: z.string().optional(),
+  sectionHeading: z.string().optional(),
+  aboutHeading: z.string().optional(),
+  aboutDescription: z.string().optional(),
+  notFoundMessage: z.string().optional(),
+  copyright: z.string().optional(),
+  featureItems: z.array(featureItemSchema).optional(),
 }).passthrough()
 
 const designSpecSchema = z.object({
@@ -37,6 +56,7 @@ const designSpecSchema = z.object({
     wideSize: z.string(),
   }).passthrough(),
   designNarrative: z.string(),
+  copyStrings: copyStringsSchema.optional(),
   styleVariations: z.array(
     z.object({
       title: z.string(),
@@ -44,41 +64,6 @@ const designSpecSchema = z.object({
       colors: z.array(colorPaletteEntrySchema),
     }).passthrough(),
   ),
-}).passthrough()
-
-const themeFileSchema = z.object({
-  name: z.string(),
-  content: z.string(),
-}).passthrough()
-
-const themeManifestSchema = z.object({
-  name: z.string().default(''),
-  slug: z.string().default(''),
-  themeJson: z.unknown().optional().default({ version: 3 }),
-  templates: z.array(themeFileSchema).default([]),
-  templateParts: z.array(themeFileSchema).default([]),
-  patterns: z.array(themeFileSchema).default([]),
-  files: z.array(z.string()).default([]),
-  colors: z.array(colorPaletteEntrySchema).optional(),
-  typography: z
-    .object({
-      fontFamilies: z.array(
-        z.object({
-          name: z.string(),
-          slug: z.string(),
-          fontFamily: z.string(),
-        }).passthrough(),
-      ),
-    })
-    .passthrough()
-    .optional(),
-  layout: z
-    .object({
-      contentSize: z.string(),
-      wideSize: z.string(),
-    })
-    .passthrough()
-    .optional(),
 }).passthrough()
 
 /**
@@ -89,19 +74,16 @@ const themeManifestSchema = z.object({
  * - JSON buried in prose (find first { to last matching })
  */
 function extractJson(raw: string): string {
-  // Try 1: strip code fences (greedy — find fenced block anywhere)
   const fenceMatch = raw.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/)
   if (fenceMatch) {
     return fenceMatch[1].trim()
   }
 
-  // Try 2: raw string is already JSON
   const trimmed = raw.trim()
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     return trimmed
   }
 
-  // Try 3: find the first { and match to its closing }
   const start = raw.indexOf('{')
   if (start !== -1) {
     let depth = 0
@@ -135,6 +117,50 @@ function extractJson(raw: string): string {
   return trimmed
 }
 
+const DEFAULT_COPY: CopyStrings = {
+  heroHeading: 'A fresh perspective starts here.',
+  heroSubheading: 'Discover ideas, stories, and insights crafted with care. A space designed for curious minds.',
+  ctaHeading: 'Ready to dive in?',
+  ctaDescription: 'Join our community and stay updated with the latest posts and features.',
+  ctaButtonText: 'Get Started',
+  sectionHeading: 'Latest Stories',
+  aboutHeading: 'What this is all about',
+  aboutDescription: 'A space dedicated to thoughtful content and creative expression. We believe in quality over quantity.',
+  notFoundMessage: 'The page you are looking for has wandered off. Try searching or head back home.',
+  copyright: '© 2026 All rights reserved.',
+  featureItems: [
+    { title: 'Thoughtful Design', description: 'Every detail considered, every element purposeful.' },
+    { title: 'Quality Content', description: 'Ideas worth sharing, stories worth telling.' },
+    { title: 'Built to Last', description: 'A foundation you can trust and build upon.' },
+  ],
+}
+
+function fillCopyDefaults(partial?: Partial<CopyStrings>, themeName?: string): CopyStrings {
+  const copy = { ...DEFAULT_COPY }
+  if (partial) {
+    if (partial.heroHeading) copy.heroHeading = partial.heroHeading
+    if (partial.heroSubheading) copy.heroSubheading = partial.heroSubheading
+    if (partial.ctaHeading) copy.ctaHeading = partial.ctaHeading
+    if (partial.ctaDescription) copy.ctaDescription = partial.ctaDescription
+    if (partial.ctaButtonText) copy.ctaButtonText = partial.ctaButtonText
+    if (partial.sectionHeading) copy.sectionHeading = partial.sectionHeading
+    if (partial.aboutHeading) copy.aboutHeading = partial.aboutHeading
+    if (partial.aboutDescription) copy.aboutDescription = partial.aboutDescription
+    if (partial.notFoundMessage) copy.notFoundMessage = partial.notFoundMessage
+    if (partial.copyright) copy.copyright = partial.copyright
+    if (partial.featureItems?.length) {
+      copy.featureItems = partial.featureItems.slice(0, 3)
+      while (copy.featureItems.length < 3) {
+        copy.featureItems.push(DEFAULT_COPY.featureItems[copy.featureItems.length]!)
+      }
+    }
+  }
+  if (themeName) {
+    copy.copyright = copy.copyright.replace('All rights reserved.', `${themeName}. All rights reserved.`)
+  }
+  return copy
+}
+
 export function parseDesignSpec(raw: string): DesignSpec {
   const cleaned = extractJson(raw)
 
@@ -158,51 +184,22 @@ export function parseDesignSpec(raw: string): DesignSpec {
     )
   }
 
-  return result.data as DesignSpec
-}
+  const data = result.data as Record<string, unknown>
 
-export function parseThemeManifest(raw: string): ThemeManifest {
-  const cleaned = extractJson(raw)
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(cleaned)
-  } catch {
-    console.error('Failed to parse theme manifest JSON. First 500 chars:', raw.slice(0, 500))
-    throw new ParseError('Invalid JSON in theme manifest response', raw)
+  // Support legacy heroHeading/heroSubheading fields if copyStrings is missing
+  const legacyCopy: Partial<CopyStrings> = {}
+  if (data.heroHeading && typeof data.heroHeading === 'string') {
+    legacyCopy.heroHeading = data.heroHeading
+  }
+  if (data.heroSubheading && typeof data.heroSubheading === 'string') {
+    legacyCopy.heroSubheading = data.heroSubheading
   }
 
-  const result = themeManifestSchema.safeParse(parsed)
-  if (!result.success) {
-    const errors = result.error.issues.map(
-      (i) => `${i.path.join('.')}: ${i.message}`,
-    )
-    throw new ParseError(
-      `Theme manifest schema validation failed: ${errors.join('; ')}`,
-      raw,
-      errors,
-    )
-  }
+  const rawCopyStrings = (data.copyStrings ?? legacyCopy) as Partial<CopyStrings>
+  const copyStrings = fillCopyDefaults(rawCopyStrings, data.name as string)
 
-  const manifest = result.data as ThemeManifest
-
-  // Validate index template has sufficient content and required blocks
-  const indexTemplate = manifest.templates?.find(
-    (t) => t.name === 'index' || t.name === 'index.html',
-  )
-  if (indexTemplate) {
-    const content = indexTemplate.content
-    const hasStructure =
-      content.includes('wp:cover') ||
-      content.includes('wp:query') ||
-      (content.includes('wp:group') && content.length > 300)
-    if (content.length < 800 || !hasStructure) {
-      throw new ParseError(
-        `index template is too thin (${content.length} chars, hasStructure=${hasStructure}). Must contain wp:cover or wp:group hero AND wp:query loop with color attributes. Current content: ${content.slice(0, 200)}`,
-        raw,
-      )
-    }
-  }
-
-  return manifest
+  return {
+    ...result.data,
+    copyStrings,
+  } as DesignSpec
 }

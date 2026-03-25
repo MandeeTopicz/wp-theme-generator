@@ -94,3 +94,45 @@
 @utility animate-fade-up {
   animation: fade-up 300ms ease-out forwards;
 }
+
+/* Hover animations for interactive elements */
+@utility hover-lift {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 111, 255, 0.15);
+  }
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+}
+
+@utility hover-glow {
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease;
+  &:hover {
+    box-shadow: 0 0 0 2px rgba(124, 111, 255, 0.2);
+  }
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@utility hover-scale {
+  transition: transform 150ms ease;
+  &:hover {
+    transform: scale(1.03);
+  }
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@utility hover-pill {
+  transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  &:hover {
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: translateY(0) scale(0.95);
+  }
+}

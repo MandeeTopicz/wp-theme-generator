@@ -1,9 +1,9 @@
 import type {
   GenerateRequest,
-  ThemeManifest,
   ColorPaletteEntry,
   ThemeTypography,
   ThemeLayout,
+  CopyStrings,
 } from '@wp-theme-gen/shared'
 import { AnthropicProvider } from './anthropic'
 import { GeminiProvider } from './gemini'
@@ -11,10 +11,13 @@ import { GeminiProvider } from './gemini'
 export interface DesignSpec {
   name: string
   slug: string
+  archetype?: string
   colors: ColorPaletteEntry[]
   typography: ThemeTypography
   layout: ThemeLayout
   designNarrative: string
+  copyTone?: string
+  copyStrings: CopyStrings
   styleVariations: {
     title: string
     slug: string
@@ -22,16 +25,18 @@ export interface DesignSpec {
   }[]
 }
 
+export interface IterationResult {
+  templates?: { name: string; content: string }[]
+  templateParts?: { name: string; content: string }[]
+  patterns?: { name: string; content: string }[]
+}
+
 export interface AIProvider {
   generateDesignSpec(request: GenerateRequest): Promise<DesignSpec>
-  generateThemeManifest(
-    request: GenerateRequest,
-    design: DesignSpec,
-  ): Promise<ThemeManifest>
   iterateTheme(
-    manifest: ThemeManifest,
+    manifest: { templates: { name: string; content: string }[]; templateParts: { name: string; content: string }[]; patterns: { name: string; content: string }[] },
     instruction: string,
-  ): Promise<Partial<ThemeManifest>>
+  ): Promise<IterationResult>
 }
 
 export interface CreateAIProviderOptions {
@@ -42,7 +47,7 @@ export interface CreateAIProviderOptions {
 export function createAIProvider(
   options: CreateAIProviderOptions = {},
 ): AIProvider {
-  const provider = options.provider ?? process.env.AI_PROVIDER ?? 'anthropic'
+  const provider = options.provider ?? process.env.AI_PROVIDER ?? 'gemini'
 
   if (provider === 'gemini') {
     return new GeminiProvider(options.apiKey)

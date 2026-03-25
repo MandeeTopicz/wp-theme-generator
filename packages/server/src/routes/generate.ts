@@ -4,9 +4,13 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 import { z } from 'zod'
-import { validateThemeSlug, validateTheme } from '@wp-theme-gen/shared'
+import type { ThemeManifest } from '@wp-theme-gen/shared'
+import { validateThemeSlug, validateTheme, TEMPLATE_CATALOG } from '@wp-theme-gen/shared'
 import { createAIProvider } from '../ai/provider'
 import { assembleTheme, createZip } from '../theme/packager'
+import { getTemplateSkeleton, resolveColorSlugs, interpolateCopy } from '../templates'
+
+const validTemplateIds = TEMPLATE_CATALOG.map((t) => t.id)
 
 const generateSchema = z.object({
   description: z.string().min(1).max(1000),
@@ -20,6 +24,7 @@ const generateSchema = z.object({
     name: z.string(),
     colors: z.array(z.string()),
   }).optional(),
+  templateId: z.string().min(1).default('starter'),
 })
 
 export const generateRouter: RouterType = Router()
@@ -36,7 +41,16 @@ generateRouter.post('/', async (req, res, next) => {
       return
     }
 
-    const { description, siteType, targetAudience, colorMode, accentColor, themeName, themeSlug } = parsed.data
+    const { description, siteType, targetAudience, colorMode, accentColor, themeName, themeSlug, templateId } = parsed.data
+
+    if (!validTemplateIds.includes(templateId)) {
+      res.status(400).json({
+        error: true,
+        code: 'VALIDATION_ERROR',
+        message: `Invalid templateId "${templateId}". Available: ${validTemplateIds.join(', ')}`,
+      })
+      return
+    }
 
     const slugResult = validateThemeSlug(themeSlug)
     if (!slugResult.valid) {
@@ -49,7 +63,7 @@ generateRouter.post('/', async (req, res, next) => {
       return
     }
 
-    // Set up SSE headers to keep connection alive during long generation
+    // Set up SSE headers
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
@@ -60,41 +74,42 @@ generateRouter.post('/', async (req, res, next) => {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
     }
 
+    // Step 1: AI generates design spec + copy strings (single call)
     const provider = createAIProvider()
     const { colorPalette } = parsed.data
-    const request = { prompt: description, description, siteType, targetAudience, colorMode, accentColor, colorPalette }
+    const request = { prompt: description, description, siteType, targetAudience, colorMode, accentColor, colorPalette, templateId }
 
     send('progress', { step: 'design', message: 'Designing color system...' })
-    console.log('[generate] Starting Pass 1: design spec...')
+    console.log('[generate] Starting design spec generation...')
     const designSpec = await provider.generateDesignSpec(request)
-    console.log('[generate] Pass 1 complete.')
+    console.log('[generate] Design spec complete: %s (%d colors)', designSpec.name, designSpec.colors.length)
 
-    send('progress', { step: 'templates', message: 'Generating templates...' })
-    console.log('[generate] Starting Pass 2: theme manifest...')
-    const manifest = await provider.generateThemeManifest(request, designSpec)
-    console.log('[generate] Pass 2 complete.')
+    // Step 2: Deterministic template assembly (no AI)
+    send('progress', { step: 'building', message: 'Building templates...' })
+    console.log('[generate] Building templates from skeleton: %s', templateId)
 
+    const colorSlots = resolveColorSlugs(designSpec.colors, colorMode)
+    const skeleton = getTemplateSkeleton(templateId, colorSlots)
+    const filled = interpolateCopy(skeleton, designSpec.copyStrings)
+
+    const manifest: ThemeManifest = {
+      name: themeName,
+      slug: themeSlug,
+      themeJson: { version: 3 },
+      templates: filled.templates,
+      templateParts: filled.templateParts,
+      patterns: filled.patterns,
+      files: [],
+      colors: designSpec.colors,
+      typography: designSpec.typography,
+      layout: designSpec.layout,
+    }
+
+    console.log('[generate] Template assembly complete: %d templates, %d parts, %d patterns',
+      manifest.templates.length, manifest.templateParts.length, manifest.patterns.length)
+
+    // Step 3: Validate
     send('progress', { step: 'validating', message: 'Validating theme...' })
-
-    // Patch manifest with user-supplied identity
-    manifest.name = themeName
-    manifest.slug = themeSlug
-
-    if (!manifest.themeJson || typeof manifest.themeJson !== 'object') {
-      manifest.themeJson = { version: 3 }
-    } else if ((manifest.themeJson as Record<string, unknown>).version !== 3) {
-      (manifest.themeJson as Record<string, unknown>).version = 3
-    }
-
-    const hasIndex = manifest.templates.some(
-      (t) => t.name === 'index' || t.name === 'index.html',
-    )
-    if (!hasIndex) {
-      manifest.templates.unshift({
-        name: 'index.html',
-        content: '<!-- wp:paragraph --><p>Welcome</p><!-- /wp:paragraph -->',
-      })
-    }
 
     manifest.files = [
       'style.css',
@@ -107,6 +122,7 @@ generateRouter.post('/', async (req, res, next) => {
     const validationResult = validateTheme(manifest)
     console.log('[generate] Validation: %s (%d errors, %d warnings)', validationResult.isValid ? 'PASS' : 'FAIL', validationResult.errors.length, validationResult.warnings.length)
 
+    // Step 4: Package
     send('progress', { step: 'packaging', message: 'Packaging theme...' })
     console.log('[generate] Assembling and packaging...')
 
@@ -125,7 +141,6 @@ generateRouter.post('/', async (req, res, next) => {
     send('complete', { sessionId, manifest, validationResult })
     res.end()
   } catch (err) {
-    // If headers already sent (SSE mode), send error event then end
     if (res.headersSent) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       res.write(`event: error\ndata: ${JSON.stringify({ error: true, code: 'GENERATION_ERROR', message })}\n\n`)

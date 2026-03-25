@@ -16,6 +16,81 @@ Tested up to: 6.7
 Requires PHP: 7.4
 Text Domain: ${manifest.slug}
 */
+
+/* ── Reset & Layout ────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; height: auto; display: block; }
+
+/* Constrain content inside full-width sections */
+.wp-block-group.alignfull > :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
+  max-width: var(--wp--style--global--content-size, 650px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Cards ─────────────────────────────────────────── */
+.wp-block-post-template .wp-block-group {
+  overflow: hidden;
+  min-width: 0;
+}
+.wp-block-post-title,
+.wp-block-post-excerpt,
+.wp-block-post-date {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ── Grid gaps ─────────────────────────────────────── */
+.wp-block-post-template.is-layout-grid { gap: 2rem; }
+.wp-block-columns { gap: 2rem; }
+
+/* ── Transitions & Hover ──────────────────────────── */
+a { transition: color 0.15s ease, opacity 0.15s ease; }
+
+.wp-block-button__link {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
+}
+.wp-block-button__link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  filter: brightness(1.08);
+}
+
+.wp-block-post-template .wp-block-group {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.wp-block-post-template .wp-block-group:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+}
+
+.wp-block-navigation a:hover { opacity: 0.7; }
+
+.wp-block-social-links .wp-social-link {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.wp-block-social-links .wp-social-link:hover {
+  transform: scale(1.15);
+  opacity: 0.8;
+}
+
+/* ── Featured images inside cards ─────────────────── */
+.wp-block-post-featured-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Smooth scroll ─────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
+/* ── Selection color ───────────────────────────────── */
+::selection {
+  background: var(--wp--preset--color--accent, #7c6fff);
+  color: #fff;
+}
 `
 }
 
@@ -35,19 +110,67 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
 
   // Derive style colors from palette using luminance detection.
   // Find the darkest color for background and lightest for text to guarantee contrast.
+  // For accent, prefer the most saturated color (not just mid-luminance).
   let bgSlug = 'base'
   let textSlug = 'contrast'
   let accentSlug = 'accent'
+
+  function getSaturation(hex: string): number {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    if (max === 0) return 0
+    return (max - min) / max
+  }
 
   if (colors.length >= 2) {
     const sorted = [...colors].sort(
       (a, b) => getLuminance(a.color) - getLuminance(b.color),
     )
-    bgSlug = sorted[0]!.slug
-    textSlug = sorted[sorted.length - 1]!.slug
-    // Pick a mid-luminance color as accent, or fall back to the second-brightest
-    const mid = Math.floor(sorted.length / 2)
-    accentSlug = sorted[mid]!.slug
+    const darkestEntry = sorted[0]!
+    const lightestEntry = sorted[sorted.length - 1]!
+
+    // Detect light vs dark theme from palette character.
+    // If the lightest color has very high luminance (>0.7) AND
+    // there are more light colors than dark, it's a light theme.
+    const lightCount = sorted.filter((c) => getLuminance(c.color) > 0.3).length
+    const isLightTheme = lightCount > sorted.length / 2 && getLuminance(lightestEntry.color) > 0.7
+
+    if (isLightTheme) {
+      // Light theme: light background, dark text
+      bgSlug = lightestEntry.slug
+      textSlug = darkestEntry.slug
+    } else {
+      // Dark theme: dark background, light text
+      bgSlug = darkestEntry.slug
+      textSlug = lightestEntry.slug
+    }
+
+    // Pick accent: most saturated color with sufficient contrast against background
+    const bgColor = isLightTheme ? lightestEntry.color : darkestEntry.color
+    const bgLum = getLuminance(bgColor)
+    const candidates = colors.filter(
+      (c) => c.slug !== bgSlug && c.slug !== textSlug,
+    )
+    // Prefer colors with contrast ratio >= 4.5:1 against bg (WCAG AA)
+    const contrastRatio = (hex: string): number => {
+      const cLum = getLuminance(hex)
+      return (Math.max(bgLum, cLum) + 0.05) / (Math.min(bgLum, cLum) + 0.05)
+    }
+    const goodContrast = candidates.filter((c) => contrastRatio(c.color) >= 4.5)
+    if (goodContrast.length > 0) {
+      // Among good-contrast colors, pick the most saturated
+      goodContrast.sort((a, b) => getSaturation(b.color) - getSaturation(a.color))
+      accentSlug = goodContrast[0]!.slug
+    } else if (candidates.length > 0) {
+      // No color meets 4.5:1 — pick the one with the HIGHEST contrast ratio
+      candidates.sort((a, b) => contrastRatio(b.color) - contrastRatio(a.color))
+      accentSlug = candidates[0]!.slug
+    } else {
+      accentSlug = sorted[Math.floor(sorted.length / 2)]!.slug
+    }
   } else if (colors.length === 1) {
     bgSlug = colors[0]!.slug
     textSlug = colors[0]!.slug
@@ -57,6 +180,7 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
     $schema: 'https://schemas.wp.org/trunk/theme.json',
     version: 3,
     settings: {
+      appearanceTools: true,
       color: {
         palette: colors.map((c) => ({
           name: c.name,
@@ -70,51 +194,208 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           slug: f.slug,
           fontFamily: f.fontFamily,
         })),
+        fontSizes: [
+          { slug: 'small', size: '0.875rem', name: 'Small' },
+          { slug: 'base', size: '1.0625rem', name: 'Base' },
+          { slug: 'medium', size: '1.25rem', name: 'Medium' },
+          { slug: 'large', size: '2rem', name: 'Large' },
+          { slug: 'x-large', size: '3rem', name: 'Extra Large' },
+          { slug: 'hero', size: 'clamp(2.5rem, 6vw, 5rem)', name: 'Hero' },
+        ],
+      },
+      spacing: {
+        units: ['px', 'em', 'rem', 'vh', 'vw', '%'],
+        blockGap: true,
+        spacingSizes: [
+          { name: 'XSmall', slug: '20', size: '0.5rem' },
+          { name: 'Small', slug: '30', size: '1rem' },
+          { name: 'Medium', slug: '40', size: '2rem' },
+          { name: 'Large', slug: '50', size: '4rem' },
+          { name: 'XLarge', slug: '60', size: '7rem' },
+          { name: '2XLarge', slug: '70', size: '10rem' },
+        ],
       },
       layout: {
         contentSize,
         wideSize,
       },
     },
-    // Use AI-generated styles if available (richer, with elements/blocks overrides),
-    // otherwise fall back to luminance-derived styles
-    styles: (manifest.themeJson && typeof manifest.themeJson === 'object' && 'styles' in (manifest.themeJson as Record<string, unknown>))
-      ? (manifest.themeJson as Record<string, unknown>).styles as Record<string, unknown>
-      : {
-          color: {
-            background: `var(--wp--preset--color--${bgSlug})`,
-            text: `var(--wp--preset--color--${textSlug})`,
+    // Always generate comprehensive styles using luminance-derived colors.
+    // If the AI also provided styles, deep-merge them on top so AI overrides
+    // are preserved but nothing falls through to WordPress default blue.
+    styles: (() => {
+      const baseStyles: Record<string, unknown> = {
+        color: {
+          background: `var(--wp--preset--color--${bgSlug})`,
+          text: `var(--wp--preset--color--${textSlug})`,
+        },
+        typography: {
+          lineHeight: '1.6',
+          textTransform: 'none',
+        },
+        spacing: {
+          blockGap: '3rem',
+          padding: {
+            top: '0',
+            right: '2.5rem',
+            bottom: '0',
+            left: '2.5rem',
           },
-          elements: {
-            link: {
+        },
+        elements: {
+          link: {
+            color: {
+              text: `var(--wp--preset--color--${textSlug})`,
+            },
+            ':hover': {
               color: {
                 text: `var(--wp--preset--color--${accentSlug})`,
               },
             },
-            heading: {
-              color: {
-                text: `var(--wp--preset--color--${textSlug})`,
-              },
-            },
-            button: {
-              color: {
-                background: `var(--wp--preset--color--${accentSlug})`,
-                text: `var(--wp--preset--color--${textSlug})`,
-              },
-              border: {
-                radius: '4px',
-              },
+            typography: {
+              textDecoration: 'underline',
             },
           },
-          blocks: {
-            'core/navigation': {
-              color: { text: `var(--wp--preset--color--${textSlug})` },
+          heading: {
+            color: {
+              text: `var(--wp--preset--color--${textSlug})`,
             },
-            'core/post-title': {
-              color: { text: `var(--wp--preset--color--${textSlug})` },
+            typography: {
+              fontWeight: '700',
+              lineHeight: '1.2',
+              textTransform: 'none',
+            },
+          },
+          h1: {
+            typography: {
+              fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+              letterSpacing: '-0.03em',
+              lineHeight: '1.1',
+            },
+          },
+          h2: {
+            typography: {
+              fontSize: '2rem',
+              letterSpacing: '-0.01em',
+              lineHeight: '1.2',
+            },
+          },
+          h3: {
+            typography: {
+              fontSize: '1.5rem',
+              lineHeight: '1.3',
+            },
+          },
+          button: {
+            color: {
+              background: `var(--wp--preset--color--${accentSlug})`,
+              text: `var(--wp--preset--color--${textSlug})`,
+            },
+            typography: {
+              fontWeight: '600',
+              textTransform: 'none',
+            },
+            border: {
+              radius: '4px',
+            },
+          },
+          caption: {
+            color: {
+              text: `var(--wp--preset--color--${textSlug})`,
+            },
+            typography: {
+              fontSize: '0.85rem',
             },
           },
         },
+        blocks: {
+          'core/navigation': {
+            color: { text: `var(--wp--preset--color--${textSlug})` },
+            typography: { textTransform: 'none', fontWeight: '500' },
+            elements: {
+              link: {
+                color: { text: `var(--wp--preset--color--${textSlug})` },
+                ':hover': { color: { text: `var(--wp--preset--color--${accentSlug})` } },
+                typography: { textDecoration: 'none' },
+              },
+            },
+          },
+          'core/post-title': {
+            color: { text: `var(--wp--preset--color--${textSlug})` },
+            typography: { textTransform: 'none', fontWeight: '700', lineHeight: '1.2' },
+            elements: {
+              link: {
+                color: { text: `var(--wp--preset--color--${textSlug})` },
+                ':hover': { color: { text: `var(--wp--preset--color--${accentSlug})` } },
+                typography: { textDecoration: 'none' },
+              },
+            },
+          },
+          'core/post-excerpt': {
+            color: { text: `var(--wp--preset--color--${textSlug})` },
+            typography: { fontSize: '0.9rem', lineHeight: '1.6', opacity: '0.8' },
+          },
+          'core/post-date': {
+            color: { text: `var(--wp--preset--color--${textSlug})` },
+            typography: { fontSize: '0.8rem', opacity: '0.6' },
+          },
+          'core/query-pagination': {
+            color: { text: `var(--wp--preset--color--${accentSlug})` },
+            typography: { fontWeight: '600' },
+            spacing: { blockGap: '0.5rem' },
+            elements: {
+              link: {
+                color: { text: `var(--wp--preset--color--${accentSlug})` },
+                ':hover': { color: { text: `var(--wp--preset--color--${textSlug})` } },
+                typography: { textDecoration: 'none' },
+              },
+            },
+          },
+          'core/site-title': {
+            color: { text: `var(--wp--preset--color--${textSlug})` },
+            typography: { fontWeight: '700', textTransform: 'none', fontSize: '1.25rem' },
+            elements: {
+              link: {
+                color: { text: `var(--wp--preset--color--${textSlug})` },
+                ':hover': { color: { text: `var(--wp--preset--color--${accentSlug})` } },
+                typography: { textDecoration: 'none' },
+              },
+            },
+          },
+          'core/site-tagline': {
+            color: { text: `var(--wp--preset--color--${accentSlug})` },
+            typography: { fontSize: '0.9rem' },
+          },
+        },
+      }
+
+      // If AI provided styles, merge them over the baseline
+      const aiThemeJson = manifest.themeJson as Record<string, unknown> | undefined
+      if (aiThemeJson && typeof aiThemeJson === 'object' && 'styles' in aiThemeJson) {
+        const aiStyles = aiThemeJson.styles as Record<string, unknown>
+        // Shallow merge top-level keys, deep merge elements and blocks
+        if (aiStyles.color) baseStyles.color = { ...(baseStyles.color as Record<string, unknown>), ...(aiStyles.color as Record<string, unknown>) }
+        if (aiStyles.elements) baseStyles.elements = { ...(baseStyles.elements as Record<string, unknown>), ...(aiStyles.elements as Record<string, unknown>) }
+        if (aiStyles.blocks) baseStyles.blocks = { ...(baseStyles.blocks as Record<string, unknown>), ...(aiStyles.blocks as Record<string, unknown>) }
+        if (aiStyles.typography) baseStyles.typography = { ...(baseStyles.typography as Record<string, unknown>), ...(aiStyles.typography as Record<string, unknown>) }
+        // Deep merge spacing to preserve body padding even if AI overrides blockGap
+        if (aiStyles.spacing) {
+          const baseSpacing = baseStyles.spacing as Record<string, unknown>
+          const aiSpacing = aiStyles.spacing as Record<string, unknown>
+          baseStyles.spacing = {
+            ...baseSpacing,
+            ...aiSpacing,
+            // Always preserve body padding — AI often omits it causing content to hit edges
+            padding: {
+              ...((baseSpacing.padding ?? {}) as Record<string, unknown>),
+              ...((aiSpacing.padding ?? {}) as Record<string, unknown>),
+            },
+          }
+        }
+      }
+
+      return baseStyles
+    })(),
     templateParts: [
       { name: 'header', area: 'header', title: 'Header' },
       { name: 'footer', area: 'footer', title: 'Footer' },
@@ -126,19 +407,113 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
 }
 
 export function buildTemplateFile(template: BlockTemplate): string {
+  let content = template.content
+
+  // Post-process block markup to fix common AI generation issues
+  content = fixBlockMarkup(content)
+
   if (template.isTemplatePart) {
-    return template.content
+    return content
   }
 
   // If the AI already included template-part references, return as-is
-  if (template.content.includes('wp:template-part')) {
-    return template.content
+  if (content.includes('wp:template-part')) {
+    return content
   }
 
   // Otherwise wrap with header/footer template parts
   return `<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
-${template.content}
+${content}
 <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->`
+}
+
+/**
+ * Post-process AI-generated block markup to fix layout issues.
+ * The most common AI failure is omitting layout:{"type":"constrained"} on
+ * full-width groups and covers, causing content to stretch edge-to-edge.
+ */
+function fixBlockMarkup(content: string): string {
+  // Fix wp:group blocks with align:"full" but missing layout constraint
+  content = content.replace(
+    /<!--\s*wp:group\s+(\{[^]*?\})\s*-->/g,
+    (_match, attrsStr: string) => {
+      try {
+        const attrs = JSON.parse(attrsStr) as Record<string, unknown>
+        if (attrs.align === 'full' && !attrs.layout) {
+          attrs.layout = { type: 'constrained' }
+          return `<!-- wp:group ${JSON.stringify(attrs)} -->`
+        }
+        // Also fix if layout exists but is missing type
+        if (attrs.align === 'full' && attrs.layout && typeof attrs.layout === 'object') {
+          const layout = attrs.layout as Record<string, unknown>
+          if (!layout.type) {
+            layout.type = 'constrained'
+            return `<!-- wp:group ${JSON.stringify(attrs)} -->`
+          }
+        }
+        return _match
+      } catch {
+        return _match
+      }
+    },
+  )
+
+  // Fix wp:cover blocks missing layout constraint on inner content.
+  // Covers with align:"full" need their inner wp:group to have constrained layout.
+  // We can't easily fix nesting, but we can ensure the cover itself has proper align.
+  content = content.replace(
+    /<!--\s*wp:cover\s+(\{[^]*?\})\s*-->/g,
+    (_match, attrsStr: string) => {
+      try {
+        const attrs = JSON.parse(attrsStr) as Record<string, unknown>
+        // Ensure covers that look full-width have align:"full"
+        if (!attrs.align && (attrs.minHeightUnit === 'vh' || (typeof attrs.minHeight === 'number' && attrs.minHeight >= 50))) {
+          attrs.align = 'full'
+        }
+        return `<!-- wp:cover ${JSON.stringify(attrs)} -->`
+      } catch {
+        return _match
+      }
+    },
+  )
+
+  // Fix wp:columns blocks missing align and layout
+  content = content.replace(
+    /<!--\s*wp:columns\s+(\{[^]*?\})\s*-->/g,
+    (_match, attrsStr: string) => {
+      try {
+        const attrs = JSON.parse(attrsStr) as Record<string, unknown>
+        // Columns inside constrained parents don't need align:full,
+        // but if they have it, ensure they have layout too
+        if (attrs.align === 'full' && !attrs.layout) {
+          attrs.layout = { type: 'constrained' }
+          return `<!-- wp:columns ${JSON.stringify(attrs)} -->`
+        }
+        return _match
+      } catch {
+        return _match
+      }
+    },
+  )
+
+  // Fix wp:query blocks — ensure they have layout for proper grid display
+  content = content.replace(
+    /<!--\s*wp:query\s+(\{[^]*?\})\s*-->/g,
+    (_match, attrsStr: string) => {
+      try {
+        const attrs = JSON.parse(attrsStr) as Record<string, unknown>
+        if (attrs.align === 'full' && !attrs.layout) {
+          attrs.layout = { type: 'constrained' }
+          return `<!-- wp:query ${JSON.stringify(attrs)} -->`
+        }
+        return _match
+      } catch {
+        return _match
+      }
+    },
+  )
+
+  return content
 }
 
 function ensureNavAriaLabel(content: string): string {

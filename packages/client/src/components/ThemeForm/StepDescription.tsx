@@ -71,7 +71,7 @@ export default function StepDescription({ form, update }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <label
           htmlFor="description"
@@ -86,9 +86,9 @@ export default function StepDescription({ form, update }: Props) {
             value={form.description}
             onChange={(e) => update({ description: e.target.value })}
             placeholder="A modern photography portfolio with a dark aesthetic, large hero images, and a minimal navigation..."
-            rows={5}
+            rows={4}
             maxLength={1000}
-            className="w-full bg-bg3 border border-border rounded-lg px-4 py-3 pb-12 text-text1 placeholder-text3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
+            className="w-full bg-bg3 border border-border rounded-lg px-3 py-2.5 pb-12 text-text1 placeholder-text3 text-base resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
           />
           <div
             className="absolute bottom-2.5 left-2.5 right-2.5 flex gap-1.5 overflow-x-auto"
@@ -103,7 +103,7 @@ export default function StepDescription({ form, update }: Props) {
                 key={s.label}
                 type="button"
                 onClick={() => applySuggestion(s)}
-                className="shrink-0 px-2.5 py-1 text-[11px] text-text2 rounded-full border border-white/[0.09] cursor-pointer transition-colors duration-100 hover:border-accent hover:text-text1 active:bg-accent active:text-white focus:outline-none"
+                className="shrink-0 px-2.5 py-1 text-[11px] text-text2 rounded-full border border-white/[0.09] cursor-pointer hover:border-accent hover:text-text1 active:bg-accent active:text-white focus:outline-none hover-pill"
                 style={{ backgroundColor: '#12121c' }}
               >
                 {s.label}
@@ -129,12 +129,12 @@ export default function StepDescription({ form, update }: Props) {
         <label className="block text-text1 text-sm font-medium mb-2">
           Site type
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {SITE_TYPES.map((type) => (
             <button
               key={type}
               onClick={() => update({ siteType: type })}
-              className={`px-4 py-2 text-sm rounded-lg capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50 ${
+              className={`px-4 py-2 text-sm rounded-lg capitalize focus:outline-none focus:ring-2 focus:ring-accent/50 hover-glow ${
                 form.siteType === type
                   ? 'bg-accent text-white'
                   : 'bg-bg3 text-text2 hover:text-text1 border border-border hover:border-border2'
@@ -160,7 +160,7 @@ export default function StepDescription({ form, update }: Props) {
           value={form.targetAudience}
           onChange={(e) => update({ targetAudience: e.target.value })}
           placeholder="e.g. Creative professionals, tech startups"
-          className="w-full bg-bg3 border border-border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
+          className="w-full bg-bg3 border border-border rounded-lg px-3 py-2.5 text-text1 placeholder-text3 text-base focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
         />
       </div>
     </div>

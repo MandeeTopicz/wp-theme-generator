@@ -15,6 +15,21 @@ const mockDesignSpec: DesignSpec = {
   layout: { contentSize: '620px', wideSize: '1200px' },
   designNarrative: 'A bold theme',
   styleVariations: [],
+  copyStrings: {
+    heroHeading: 'Welcome',
+    heroSubheading: 'A bold theme for your site',
+    ctaHeading: 'Get Started',
+    ctaDescription: 'Start building today',
+    ctaButtonText: 'Learn More',
+    sectionHeading: 'Features',
+    aboutHeading: 'About Us',
+    aboutDescription: 'We build great themes',
+    notFoundMessage: 'Page not found',
+    copyright: '2026 Test Theme',
+    featureItems: [
+      { title: 'Fast', description: 'Lightning quick' },
+    ],
+  },
 }
 
 const mockManifest: ThemeManifest = {
@@ -42,8 +57,6 @@ const mockManifest: ThemeManifest = {
 vi.mock('../ai/provider', () => ({
   createAIProvider: () => ({
     generateDesignSpec: vi.fn().mockResolvedValue(mockDesignSpec),
-    generateThemeManifest: vi.fn().mockResolvedValue(mockManifest),
-    iterateTheme: vi.fn().mockResolvedValue({}),
   }),
 }))
 
@@ -61,6 +74,7 @@ const validBody = {
   siteType: 'portfolio',
   themeName: 'Test Theme',
   themeSlug: 'test-theme',
+  templateId: 'starter',
 }
 
 function parseSSEText(text: string): { event: string; data: unknown }[] {

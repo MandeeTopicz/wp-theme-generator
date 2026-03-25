@@ -26,20 +26,12 @@ function Nav() {
             </span>
           </div>
         </Link>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/generate"
-            className="px-3 py-1.5 text-text2 text-sm border border-border2 rounded-full hover:text-text1 hover:border-accent/40 transition-colors"
-          >
-            New Theme
-          </Link>
-          <Link
-            to="/generate"
-            className="px-4 py-1.5 bg-accent text-white text-sm font-medium rounded-full hover:bg-accent/90 transition-colors"
-          >
-            Generate Theme
-          </Link>
-        </div>
+        <Link
+          to="/generate"
+          className="px-4 py-1.5 bg-accent text-white text-sm font-medium rounded-full hover:bg-accent/90 transition-colors"
+        >
+          Generate New Theme
+        </Link>
       </div>
     </nav>
   )

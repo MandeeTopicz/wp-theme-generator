@@ -6,4 +6,5 @@ export interface GenerateRequest {
   colorMode?: 'light' | 'dark' | 'auto'
   accentColor?: string
   colorPalette?: { name: string; colors: string[] }
+  templateId?: string
 }

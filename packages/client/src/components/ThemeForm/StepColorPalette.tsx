@@ -1,18 +1,29 @@
 import { useState } from 'react'
 import type { FormState } from './ThemeForm'
 
+/**
+ * Palettes define brand/accent colors only. The light/dark mode toggle
+ * (set in StepIdentity) controls whether backgrounds are light or dark.
+ * The server resolveColorSlugs() picks bg/text from the palette based on luminance.
+ *
+ * Each palette has 6 colors ordered darkest → lightest:
+ *   [dark-base, dark-surface, brand-accent, mid-tone, light-surface, light-base]
+ *
+ * In LIGHT mode the server uses the lightest as bg, darkest as text.
+ * In DARK mode the server uses the darkest as bg, lightest as text.
+ */
 const PRESET_PALETTES = [
-  { name: 'Obsidian', description: 'Dark editorial', colors: ['#0a0a0a', '#1a1a1a', '#2d2d2d', '#a8a8a8', '#f5f5f5', '#e94560'] },
-  { name: 'Atelier', description: 'Warm luxury', colors: ['#1a1209', '#2c1f0e', '#8b6914', '#d4af6e', '#f5efe6', '#c9a84c'] },
-  { name: 'Nordic', description: 'Clean minimal', colors: ['#1a2332', '#2c3e55', '#4a6fa5', '#a8c0d6', '#f0f4f8', '#4a90e2'] },
-  { name: 'Forest', description: 'Natural organic', colors: ['#1a2e1a', '#2d4a2d', '#4a7c59', '#8ab89a', '#f0f5f0', '#5a9e6f'] },
-  { name: 'Dusk', description: 'Purple dusk', colors: ['#12091a', '#1e0f2e', '#4a1e6e', '#9b6bb5', '#f0e8f8', '#7c3aed'] },
-  { name: 'Ember', description: 'Warm terracotta', colors: ['#1a0f0a', '#2e1a12', '#8b3a1e', '#d4785a', '#f5ede8', '#c0542e'] },
-  { name: 'Linen', description: 'Soft boutique', colors: ['#1a1814', '#2e2b24', '#6b5c3e', '#c4a882', '#f5f0e8', '#8b6914'] },
-  { name: 'Midnight', description: 'Deep ocean', colors: ['#060d1a', '#0d1f3c', '#1a3a6e', '#4a7ab5', '#e8f0f8', '#2563eb'] },
+  { name: 'Slate',    description: 'Clean neutral',    colors: ['#1e293b', '#334155', '#6366f1', '#94a3b8', '#f1f5f9', '#ffffff'] },
+  { name: 'Rose',     description: 'Warm elegant',     colors: ['#1c1917', '#44403c', '#e11d48', '#a8a29e', '#faf5f2', '#ffffff'] },
+  { name: 'Ocean',    description: 'Cool professional', colors: ['#0c1222', '#1e3a5f', '#0ea5e9', '#7dd3fc', '#f0f9ff', '#ffffff'] },
+  { name: 'Forest',   description: 'Natural organic',   colors: ['#14231a', '#2d4a2d', '#22c55e', '#86efac', '#f0fdf4', '#ffffff'] },
+  { name: 'Violet',   description: 'Creative bold',     colors: ['#13061f', '#2e1065', '#8b5cf6', '#c4b5fd', '#f5f3ff', '#ffffff'] },
+  { name: 'Amber',    description: 'Warm friendly',     colors: ['#1a1207', '#422006', '#f59e0b', '#fcd34d', '#fffbeb', '#ffffff'] },
+  { name: 'Coral',    description: 'Soft boutique',     colors: ['#1a0f0c', '#3b1a12', '#f97316', '#fdba74', '#fff7ed', '#ffffff'] },
+  { name: 'Teal',     description: 'Fresh modern',      colors: ['#0a1a1a', '#134e4a', '#14b8a6', '#5eead4', '#f0fdfa', '#ffffff'] },
 ]
 
-const COLOR_LABELS = ['Background', 'Surface', 'Accent', 'Muted', 'Light', 'Highlight']
+const COLOR_LABELS = ['Dark Base', 'Dark Surface', 'Accent', 'Mid-tone', 'Light Surface', 'Light Base']
 
 interface Props {
   form: FormState
@@ -51,29 +62,32 @@ export default function StepColorPalette({ form, update }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <label className="block text-text1 text-sm font-medium mb-3">
+        <label className="block text-text1 text-sm font-medium mb-1">
           Choose a color palette
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <p className="text-text3 text-xs mb-3">
+          Light or dark backgrounds are controlled by color mode in the Identity step.
+        </p>
+        <div className="grid grid-cols-2 gap-2.5">
           {PRESET_PALETTES.map((preset) => (
             <button
               key={preset.name}
               onClick={() => selectPreset(preset)}
-              className={`text-left p-3 rounded-xl transition-all focus:outline-none ${
+              className={`text-left p-3 rounded-lg focus:outline-none hover-lift ${
                 selectedPreset === preset.name
                   ? 'ring-2 ring-accent bg-accent/5'
                   : 'bg-bg3 border border-border hover:border-border2'
               }`}
             >
               <p className="text-text1 text-sm font-medium">{preset.name}</p>
-              <p className="text-text3 text-[11px] mb-2">{preset.description}</p>
-              <div className="flex gap-1.5">
+              <p className="text-text3 text-[10px] mb-1.5">{preset.description}</p>
+              <div className="flex gap-1">
                 {preset.colors.map((color, i) => (
                   <div
                     key={i}
-                    className="w-6 h-6 rounded-full border border-white/10"
+                    className="w-5 h-5 rounded-full border border-white/10"
                     style={{ backgroundColor: color }}
                   />
                 ))}
@@ -96,7 +110,7 @@ export default function StepColorPalette({ form, update }: Props) {
             <div className="mt-3 space-y-3 bg-bg3 border border-border rounded-xl p-4">
               {customColors.map((color, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <label className="text-text2 text-xs w-20 shrink-0">
+                  <label className="text-text2 text-xs w-24 shrink-0">
                     {COLOR_LABELS[i] ?? `Color ${i + 1}`}
                   </label>
                   <input

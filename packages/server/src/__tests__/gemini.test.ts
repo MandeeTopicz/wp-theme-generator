@@ -21,6 +21,19 @@ const validDesignSpecJson = JSON.stringify({
   layout: { contentSize: '620px', wideSize: '1200px' },
   designNarrative: 'Bold',
   styleVariations: [],
+  copyStrings: {
+    heroHeading: 'Welcome',
+    heroSubheading: 'Bold and modern',
+    ctaHeading: 'Get Started',
+    ctaDescription: 'Start building today',
+    ctaButtonText: 'Learn More',
+    sectionHeading: 'Features',
+    aboutHeading: 'About Us',
+    aboutDescription: 'We build great themes',
+    notFoundMessage: 'Page not found',
+    copyright: '2026 Test',
+    featureItems: [{ title: 'Fast', description: 'Lightning quick' }],
+  },
 })
 
 beforeEach(() => {
@@ -35,11 +48,9 @@ describe('GeminiProvider', () => {
     process.env.GEMINI_API_KEY = origKey
   })
 
-  it('has the three required AIProvider methods', () => {
+  it('has generateDesignSpec method', () => {
     const provider = new GeminiProvider('test-key')
     expect(typeof provider.generateDesignSpec).toBe('function')
-    expect(typeof provider.generateThemeManifest).toBe('function')
-    expect(typeof provider.iterateTheme).toBe('function')
   })
 
   it('strips markdown code fences from response', async () => {

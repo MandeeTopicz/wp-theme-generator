@@ -1,14 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { GenerateRequest, ThemeManifest } from '@wp-theme-gen/shared'
-import type { AIProvider, DesignSpec } from './provider'
+import type { GenerateRequest } from '@wp-theme-gen/shared'
+import type { AIProvider, DesignSpec, IterationResult } from './provider'
 import {
   buildPass1SystemPrompt,
   buildPass1UserPrompt,
-  buildPass2SystemPrompt,
-  buildPass2UserPrompt,
-  buildIterationPrompt,
+  buildIterationSystemPrompt,
+  buildIterationUserPrompt,
 } from './promptBuilder'
-import { parseDesignSpec, parseThemeManifest, ParseError } from './outputParser'
+import { parseDesignSpec, ParseError } from './outputParser'
 
 const MAX_RETRIES = 2
 const BACKOFF_BASE_MS = 1000
@@ -36,7 +35,7 @@ export class GeminiProvider implements AIProvider {
       )
     }
     this.genAI = new GoogleGenerativeAI(key)
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-pro'
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
   }
 
   async generateDesignSpec(request: GenerateRequest): Promise<DesignSpec> {
@@ -64,48 +63,25 @@ export class GeminiProvider implements AIProvider {
     throw lastError ?? new Error('Failed to generate design spec')
   }
 
-  async generateThemeManifest(
-    request: GenerateRequest,
-    design: DesignSpec,
-  ): Promise<ThemeManifest> {
-    const system = buildPass2SystemPrompt(design)
-    const userPrompt = buildPass2UserPrompt(request, design)
-
-    let lastError: Error | undefined
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      let retryPrompt = userPrompt
-      if (attempt > 0 && lastError) {
-        const errorSuffix =
-          lastError instanceof ParseError && lastError.validationErrors
-            ? `\n\nPrevious attempt had validation errors:\n${lastError.validationErrors.join('\n')}\nPlease fix and return valid JSON.`
-            : `\n\nPrevious attempt failed: ${lastError.message}\nPlease fix and return valid JSON.`
-        retryPrompt = `${userPrompt}${errorSuffix}`
-        console.log('[gemini-pass2] Retrying (attempt %d): %s', attempt + 1, lastError.message.slice(0, 100))
-      }
-      const content = await this.callAPI(system, retryPrompt)
-      try {
-        return parseThemeManifest(content)
-      } catch (err) {
-        if (err instanceof ParseError) {
-          lastError = err
-          continue
-        }
-        throw err
-      }
-    }
-    throw lastError ?? new Error('Failed to generate theme manifest')
-  }
-
   async iterateTheme(
-    manifest: ThemeManifest,
+    manifest: { templates: { name: string; content: string }[]; templateParts: { name: string; content: string }[]; patterns: { name: string; content: string }[] },
     instruction: string,
-  ): Promise<Partial<ThemeManifest>> {
-    const prompt = buildIterationPrompt(manifest, instruction)
-    const content = await this.callAPI(
-      'You are a WordPress theme developer. Return ONLY valid JSON.',
-      prompt,
-    )
-    return JSON.parse(stripCodeFences(content)) as Partial<ThemeManifest>
+  ): Promise<IterationResult> {
+    const system = buildIterationSystemPrompt()
+    const userPrompt = buildIterationUserPrompt(manifest, instruction)
+    console.log('[gemini-iterate] Sending iteration request (%d chars)', userPrompt.length)
+
+    const content = await this.callAPI(system, userPrompt)
+    try {
+      return JSON.parse(stripCodeFences(content)) as IterationResult
+    } catch {
+      // Retry once with error context
+      const retryContent = await this.callAPI(
+        system,
+        `${userPrompt}\n\nPrevious attempt returned invalid JSON. Return ONLY valid JSON.`,
+      )
+      return JSON.parse(stripCodeFences(retryContent)) as IterationResult
+    }
   }
 
   private async callAPI(system: string, userPrompt: string): Promise<string> {
@@ -120,7 +96,7 @@ export class GeminiProvider implements AIProvider {
           systemInstruction: system,
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 32000,
+            maxOutputTokens: 16000,
           },
         })
         const text = result.response.text()

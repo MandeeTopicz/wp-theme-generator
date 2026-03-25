@@ -20,7 +20,7 @@ export default function StepIdentity({ form, update }: Props) {
   const slugValid = form.themeSlug.length === 0 || VALID_SLUG.test(form.themeSlug)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <label
           htmlFor="themeName"
@@ -37,7 +37,7 @@ export default function StepIdentity({ form, update }: Props) {
             update({ themeName: name, themeSlug: toSlug(name) })
           }}
           placeholder="My Awesome Theme"
-          className="w-full bg-bg3 border border-border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
+          className="w-full bg-bg3 border border-border rounded-lg px-3 py-2.5 text-text1 placeholder-text3 text-base focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
         />
       </div>
 
@@ -54,7 +54,7 @@ export default function StepIdentity({ form, update }: Props) {
           value={form.themeSlug}
           onChange={(e) => update({ themeSlug: e.target.value })}
           placeholder="my-awesome-theme"
-          className={`w-full bg-bg3 border rounded-lg px-4 py-3 text-text1 placeholder-text3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors ${
+          className={`w-full bg-bg3 border rounded-lg px-3 py-2.5 text-text1 placeholder-text3 text-base focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors ${
             slugValid ? 'border-border' : 'border-red-500/50'
           }`}
         />
@@ -69,7 +69,7 @@ export default function StepIdentity({ form, update }: Props) {
         <label className="block text-text1 text-sm font-medium mb-2">
           Color mode
         </label>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           {(['light', 'dark', 'auto'] as const).map((mode) => (
             <button
               key={mode}
@@ -86,29 +86,6 @@ export default function StepIdentity({ form, update }: Props) {
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="accentColor"
-          className="block text-text1 text-sm font-medium mb-2"
-        >
-          Accent color
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={form.accentColor}
-            onChange={(e) => update({ accentColor: e.target.value })}
-            className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent"
-          />
-          <input
-            id="accentColor"
-            type="text"
-            value={form.accentColor}
-            onChange={(e) => update({ accentColor: e.target.value })}
-            className="w-32 bg-bg3 border border-border rounded-lg px-4 py-2 text-text1 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-colors"
-          />
-        </div>
-      </div>
     </div>
   )
 }

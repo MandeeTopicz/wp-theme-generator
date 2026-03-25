@@ -15,15 +15,13 @@ describe('createAIProvider', () => {
     vi.restoreAllMocks()
   })
 
-  it('throws if ANTHROPIC_API_KEY is missing', () => {
-    expect(() => createAIProvider()).toThrow('ANTHROPIC_API_KEY is required')
+  it('throws if API key is missing for default provider', () => {
+    expect(() => createAIProvider()).toThrow(/API_KEY is required/)
   })
 
-  it('returns an object with all three methods when key is present', () => {
+  it('returns an object with generateDesignSpec when key is present', () => {
     const provider = createAIProvider({ apiKey: 'sk-test-key' })
     expect(typeof provider.generateDesignSpec).toBe('function')
-    expect(typeof provider.generateThemeManifest).toBe('function')
-    expect(typeof provider.iterateTheme).toBe('function')
   })
 
   it('throws "not yet implemented" for openai provider', () => {

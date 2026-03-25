@@ -9,6 +9,7 @@ interface GenerateBody {
   themeName: string
   themeSlug: string
   colorPalette?: { name: string; colors: string[] }
+  templateId: string
 }
 
 interface GenerateResult {
@@ -26,7 +27,7 @@ interface GenerateError {
 }
 
 type GenerationStatus = 'idle' | 'generating' | 'complete' | 'error'
-type GenerationStep = 'design' | 'templates' | 'validating' | 'packaging' | null
+type GenerationStep = 'design' | 'building' | 'validating' | 'packaging' | null
 
 interface GenerationState {
   status: GenerationStatus

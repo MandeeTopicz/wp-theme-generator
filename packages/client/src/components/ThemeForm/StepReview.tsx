@@ -1,3 +1,4 @@
+import { TEMPLATE_CATALOG } from '@wp-theme-gen/shared'
 import type { FormState } from './ThemeForm'
 
 interface Props {
@@ -7,7 +8,10 @@ interface Props {
 }
 
 export default function StepReview({ form, isLoading, onSubmit }: Props) {
+  const templateName = TEMPLATE_CATALOG.find((t) => t.id === form.templateId)?.name ?? form.templateId
+
   const rows: [string, string][] = [
+    ['Template', templateName],
     ['Theme name', form.themeName || '(not set)'],
     ['Theme slug', form.themeSlug || '(not set)'],
     ['Site type', form.siteType],
@@ -17,21 +21,17 @@ export default function StepReview({ form, isLoading, onSubmit }: Props) {
     ['Heading font', form.headingFont || '(default)'],
     ['Body font', form.bodyFont || '(default)'],
     ['Type scale', form.typeScale],
-    ['Hero style', form.heroStyle],
-    ['Navigation', form.navigation],
-    ['Sidebar', form.sidebar ? 'Yes' : 'No'],
-    ['Footer', form.footer],
   ]
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-text1 font-semibold text-lg">Review your choices</h3>
+    <div className="space-y-4">
+      <h3 className="text-text1 font-semibold text-xl">Review your choices</h3>
 
       <div className="bg-bg3 rounded-lg overflow-hidden border border-border">
         {rows.map(([label, value], i) => (
           <div
             key={label}
-            className={`flex justify-between px-4 py-3 text-sm ${
+            className={`flex justify-between px-3 py-2.5 text-base ${
               i % 2 === 0 ? 'bg-white/[0.02]' : ''
             }`}
           >
@@ -41,16 +41,16 @@ export default function StepReview({ form, isLoading, onSubmit }: Props) {
         ))}
       </div>
 
-      <div className="bg-bg3 rounded-lg p-4 border border-border">
-        <p className="text-text2 text-sm">
+      <div className="bg-bg3 rounded-lg p-5 border border-border">
+        <p className="text-text2 text-base">
           <strong className="text-text1">Description:</strong>{' '}
           {form.description.slice(0, 200)}
           {form.description.length > 200 ? '...' : ''}
         </p>
       </div>
 
-      <p className="text-text3 text-sm text-center">
-        Estimated generation time: ~30-60 seconds
+      <p className="text-text3 text-base text-center">
+        Estimated generation time: ~10-20 seconds
       </p>
 
       <button

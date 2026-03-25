@@ -13,14 +13,16 @@ interface Props {
 type Status = 'loading' | 'active' | 'updating' | 'error'
 type LoadingStep = 'wordpress' | 'installing' | 'activating'
 type Viewport = 'mobile' | 'tablet' | 'desktop'
-type Page = 'front' | 'blog' | 'sample'
+type Page = 'front' | 'about' | 'post' | 'notfound'
 
 const REMOTE_URL = 'https://playground.wordpress.net/remote.html'
 
-const pagePaths: Record<Page, string> = {
+// Paths are updated dynamically after content seeding
+let pagePaths: Record<Page, string> = {
   front: '/',
-  blog: '/blog/',
-  sample: '/sample-page/',
+  about: '/?page_id=10',
+  post: '/?p=5',
+  notfound: '/?p=99999',
 }
 
 const loadingSteps: { key: LoadingStep; label: string }[] = [
@@ -162,8 +164,9 @@ if (is_dir($templates_dir)) {
 
       // Seed sample content
       console.log('[Playground] Seeding site options...')
+      const siteName = themeSlug.replace(/'/g, "\\'").split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
       const optResult = await client.run({
-        code: phpPrefix + `update_option('blogname', '${themeSlug.replace(/'/g, "\\'")} Preview'); update_option('blogdescription', 'Theme preview'); echo 'ok';`,
+        code: phpPrefix + `update_option('blogname', ''); update_option('blogdescription', ''); echo 'ok';`,
       })
       console.log('[Playground] Site options result:', optResult.text)
 
@@ -181,15 +184,87 @@ delete_option('page_on_front');
 update_option('permalink_structure', '/%postname%/');
 flush_rewrite_rules();
 
-// Create sample posts that will appear in the query loop
-wp_insert_post(array('post_title' => 'Getting Started with Your Theme', 'post_content' => '<!-- wp:paragraph --><p>This post demonstrates how your blog content looks with your chosen typography and colors. The layout you see is powered by the index.html template and its query loop block.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Try switching between the Desktop, Tablet, and Mobile viewport buttons above to see how the theme responds to different screen sizes.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
-wp_insert_post(array('post_title' => 'Exploring Block Patterns', 'post_content' => '<!-- wp:paragraph --><p>Block patterns are pre-designed layouts you can insert into any page or post. Your theme includes several custom patterns that match the design system.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Patterns save time by providing ready-made sections like hero areas, call-to-action blocks, and content grids.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
-wp_insert_post(array('post_title' => 'Customizing Your Design', 'post_content' => '<!-- wp:paragraph --><p>Use the WordPress Site Editor to customize colors, typography, and layouts. Everything is defined in theme.json and can be adjusted without writing code.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Your theme includes style variations for dark mode and high contrast that you can switch between in the Site Editor.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
-wp_insert_post(array('post_title' => 'Sample Page', 'post_content' => '<!-- wp:heading --><h2>About This Theme</h2><!-- /wp:heading --><!-- wp:paragraph --><p>This sample page demonstrates how your theme renders static page content with your block templates.</p><!-- /wp:paragraph -->', 'post_status' => 'publish', 'post_type' => 'page'));
-echo 'ok';
+// Helper to create a placeholder image and attach as featured image
+function create_placeholder_image($post_id, $color, $label) {
+  $upload_dir = wp_upload_dir();
+  $width = 1200;
+  $height = 800;
+  $img = imagecreatetruecolor($width, $height);
+
+  // Parse hex color
+  $r = hexdec(substr($color, 1, 2));
+  $g = hexdec(substr($color, 3, 2));
+  $b = hexdec(substr($color, 5, 2));
+  $bg_color = imagecolorallocate($img, $r, $g, $b);
+  imagefill($img, 0, 0, $bg_color);
+
+  // Add a subtle lighter rectangle for visual interest
+  $lighter = imagecolorallocate($img, min(255, $r + 30), min(255, $g + 30), min(255, $b + 30));
+  imagefilledrectangle($img, 80, 80, $width - 80, $height - 80, $lighter);
+
+  // Add text label
+  $text_color = imagecolorallocate($img, min(255, $r + 100), min(255, $g + 100), min(255, $b + 100));
+  imagestring($img, 5, $width / 2 - strlen($label) * 4.5, $height / 2 - 8, $label, $text_color);
+
+  $filename = 'placeholder-' . $post_id . '.jpg';
+  $filepath = $upload_dir['path'] . '/' . $filename;
+  imagejpeg($img, $filepath, 85);
+  imagedestroy($img);
+
+  $filetype = wp_check_filetype($filename);
+  $attachment_id = wp_insert_attachment(array(
+    'post_mime_type' => $filetype['type'],
+    'post_title'     => $label,
+    'post_content'   => '',
+    'post_status'    => 'inherit'
+  ), $filepath, $post_id);
+
+  require_once(ABSPATH . 'wp-admin/includes/image.php');
+  $attach_data = wp_generate_attachment_metadata($attachment_id, $filepath);
+  wp_update_attachment_metadata($attachment_id, $attach_data);
+  set_post_thumbnail($post_id, $attachment_id);
+}
+
+// Create sample posts with featured images
+// Use muted tones that work with any theme palette
+$colors = array('#3d4f5f', '#4a5568', '#2d3748');
+
+$p1 = wp_insert_post(array('post_title' => 'Getting Started with Your Theme', 'post_content' => '<!-- wp:paragraph --><p>This post demonstrates how your blog content looks with your chosen typography and colors. The layout you see is powered by the index.html template and its query loop block.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Try switching between the Desktop, Tablet, and Mobile viewport buttons above to see how the theme responds to different screen sizes.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
+create_placeholder_image($p1, $colors[0], 'Featured Image');
+
+$p2 = wp_insert_post(array('post_title' => 'Exploring Block Patterns', 'post_content' => '<!-- wp:paragraph --><p>Block patterns are pre-designed layouts you can insert into any page or post. Your theme includes several custom patterns that match the design system.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Patterns save time by providing ready-made sections like hero areas, call-to-action blocks, and content grids.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
+create_placeholder_image($p2, $colors[1], 'Featured Image');
+
+$p3 = wp_insert_post(array('post_title' => 'Customizing Your Design', 'post_content' => '<!-- wp:paragraph --><p>Use the WordPress Site Editor to customize colors, typography, and layouts. Everything is defined in theme.json and can be adjusted without writing code.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Your theme includes style variations for dark mode and high contrast that you can switch between in the Site Editor.</p><!-- /wp:paragraph -->', 'post_status' => 'publish'));
+create_placeholder_image($p3, $colors[2], 'Featured Image');
+
+// Create About page
+$about_id = wp_insert_post(array(
+  'post_title' => 'About',
+  'post_type' => 'page',
+  'post_content' => '<!-- wp:heading {"level":2} --><h2>Our Story</h2><!-- /wp:heading --><!-- wp:paragraph --><p>We started with a simple idea: create something meaningful. What began as a passion project has grown into something we are truly proud of. Every decision we make is guided by our commitment to quality and authenticity.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Our team brings together diverse perspectives and deep expertise. We believe the best work comes from collaboration, curiosity, and a willingness to challenge conventions.</p><!-- /wp:paragraph --><!-- wp:heading {"level":2} --><h2>What We Do</h2><!-- /wp:heading --><!-- wp:paragraph --><p>We craft thoughtful experiences that connect with people. From concept to execution, we pay attention to every detail because we know it matters.</p><!-- /wp:paragraph -->',
+  'post_status' => 'publish',
+));
+create_placeholder_image($about_id, '#5a4a8a', 'About Page');
+
+echo json_encode(array('post_id' => $p1, 'about_id' => $about_id));
 `,
       })
       console.log('[Playground] Posts/settings result:', postsResult.text)
+
+      // Parse post IDs from PHP output and set dynamic page paths
+      try {
+        const ids = JSON.parse(postsResult.text) as { post_id: number; about_id: number }
+        pagePaths = {
+          front: '/',
+          about: `/?page_id=${ids.about_id}`,
+          post: `/?p=${ids.post_id}`,
+          notfound: '/?p=99999',
+        }
+        console.log('[Playground] Dynamic page paths:', pagePaths)
+      } catch {
+        console.log('[Playground] Could not parse post IDs, using defaults')
+      }
 
       console.log('[Playground] Navigating to / ...')
       await client.goTo('/')
@@ -374,8 +449,9 @@ if ($front_id) {
                 {(
                   [
                     { key: 'front', label: 'Home' },
-                    { key: 'blog', label: 'Blog' },
-                    { key: 'sample', label: 'Sample Page' },
+                    { key: 'about', label: 'About' },
+                    { key: 'post', label: 'Blog Post' },
+                    { key: 'notfound', label: '404' },
                   ] as const
                 ).map((p) => (
                   <button

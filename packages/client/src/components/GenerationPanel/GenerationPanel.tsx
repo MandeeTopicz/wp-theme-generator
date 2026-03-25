@@ -1,10 +1,10 @@
 import { useGeneration } from '../../context/GenerationContext'
 
 const STEPS = [
-  { key: 'design', label: 'Designing color system...', sublabel: 'Pass 1' },
-  { key: 'templates', label: 'Generating templates...', sublabel: 'Pass 2' },
+  { key: 'design', label: 'Designing color system...', sublabel: 'Colors + Copy' },
+  { key: 'building', label: 'Building templates...', sublabel: 'Layout + Content' },
   { key: 'validating', label: 'Validating theme...', sublabel: 'Checking' },
-  { key: 'packaging', label: 'Packaging theme...', sublabel: 'ZIP' },
+  { key: 'packaging', label: 'Packaging theme...', sublabel: 'Done' },
 ]
 
 export default function GenerationPanel() {
@@ -17,7 +17,7 @@ export default function GenerationPanel() {
         Generating your theme
       </h3>
       <p className="text-text3 text-sm text-center mb-10">
-        This may take 30-60 seconds
+        This will take a few minutes
       </p>
       <div className="space-y-3">
         {STEPS.map((step, i) => {

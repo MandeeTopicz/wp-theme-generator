@@ -14,6 +14,21 @@ const validDesignSpec: DesignSpec = {
   layout: { contentSize: '620px', wideSize: '1200px' },
   designNarrative: 'A bold theme',
   styleVariations: [],
+  copyStrings: {
+    heroHeading: 'Welcome',
+    heroSubheading: 'A bold theme for your site',
+    ctaHeading: 'Get Started',
+    ctaDescription: 'Start building today',
+    ctaButtonText: 'Learn More',
+    sectionHeading: 'Features',
+    aboutHeading: 'About Us',
+    aboutDescription: 'We build great themes',
+    notFoundMessage: 'Page not found',
+    copyright: '2026 Test Theme',
+    featureItems: [
+      { title: 'Fast', description: 'Lightning quick' },
+    ],
+  },
 }
 
 const mockCreate = vi.fn()
