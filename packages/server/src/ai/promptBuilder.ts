@@ -523,14 +523,21 @@ Return ONLY valid JSON:
 
 Rules:
 - Only include files that actually changed. Omit unchanged files entirely.
+- Return the COMPLETE file content for each changed file — do not truncate or omit blocks.
+- NEVER duplicate blocks. If the user asks to change a block, modify it in place — do not copy-paste it.
 - NEVER use wp:html
-- Colors via preset slugs only, never raw hex
+- Colors via preset slugs only, never raw hex. Common slug meanings:
+  "base" = page background (usually white/light), "foreground" = main text (usually black/dark),
+  "accent" = brand/highlight color, "surface" = secondary background, "muted" = subdued text,
+  "accent-foreground" = text on accent backgrounds.
+  When user says "black" use "foreground", "white" use "base", "dark" use "foreground" or "surface".
 - Spacing: var(--wp--preset--spacing--20/40/60/80/120/160) only
 - Full-width groups must have layout type constrained
-- Preserve all existing color attributes
 - wp:cover minHeight at least 600 with minHeightUnit px
 - Left-align body text and section headings — do not center everything
 - Post card titles must appear BELOW featured images, never overlapping them
+- When changing a background color, also check text colors inside that block for contrast.
+  Dark background → use light text ("base" or "accent-foreground"). Light background → use dark text ("foreground").
 - Return ONLY valid JSON, no prose, no markdown`
 }
 
