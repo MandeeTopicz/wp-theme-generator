@@ -6,7 +6,7 @@ import os from 'node:os'
 import { z } from 'zod'
 import type { ThemeManifest } from '@wp-theme-gen/shared'
 import { validateThemeSlug, validateTheme } from '@wp-theme-gen/shared'
-import { createAIProvider } from '../ai/provider'
+import { createAIProvider, type AIProvider } from '../ai/provider'
 import { assembleTheme, createZip } from '../theme/packager'
 import { runGenerationPipeline, pipelineResultToManifestInput, ParseError } from '../theme/pipeline'
 
@@ -60,7 +60,20 @@ generateRouter.post('/', async (req, res, next) => {
       return
     }
 
-    // SSE setup
+    let provider: AIProvider
+    try {
+      provider = createAIProvider()
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'AI provider not configured'
+      res.status(503).json({
+        error: true,
+        code: 'AI_UNAVAILABLE',
+        message,
+      })
+      return
+    }
+
+    // SSE setup (only after provider is ready — otherwise missing API keys became opaque 500s)
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
@@ -70,8 +83,6 @@ generateRouter.post('/', async (req, res, next) => {
     const send = (event: string, data: unknown) => {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
     }
-
-    const provider = createAIProvider()
 
     const request = {
       prompt: description,

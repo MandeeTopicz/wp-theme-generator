@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import express, { type Express } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -9,7 +11,21 @@ import { downloadRouter, playgroundRouter } from './routes/download'
 import { validateRouter } from './routes/validate'
 import { iterateRouter } from './routes/iterate'
 
-dotenv.config()
+function loadEnvFiles(): void {
+  dotenv.config()
+  const cwd = process.cwd()
+  const candidates = [
+    path.join(cwd, '.env'),
+    path.join(cwd, 'packages', 'server', '.env'),
+    path.join(cwd, '..', '..', '.env'),
+  ]
+  for (const file of candidates) {
+    if (fs.existsSync(file)) {
+      dotenv.config({ path: file, override: false })
+    }
+  }
+}
+loadEnvFiles()
 
 const app: Express = express()
 const port = process.env.PORT || 3001

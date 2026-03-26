@@ -5,7 +5,7 @@ import os from 'node:os'
 import { z } from 'zod'
 import type { ThemeManifest } from '@wp-theme-gen/shared'
 import { validateTheme } from '@wp-theme-gen/shared'
-import { createAIProvider } from '../ai/provider'
+import { createAIProvider, type AIProvider } from '../ai/provider'
 import { assembleTheme, createZip } from '../theme/packager'
 
 const iterateSchema = z.object({
@@ -38,8 +38,16 @@ iterateRouter.post('/', async (req, res, next) => {
     const manifest: ThemeManifest = JSON.parse(manifestRaw)
     console.log('[iterate] Session %s, instruction: %s', sessionId, instruction.slice(0, 80))
 
+    let provider: AIProvider
+    try {
+      provider = createAIProvider()
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'AI provider not configured'
+      res.status(503).json({ error: true, code: 'AI_UNAVAILABLE', message })
+      return
+    }
+
     // Call AI for iteration
-    const provider = createAIProvider()
     const result = await provider.iterateTheme(
       {
         templates: manifest.templates,
