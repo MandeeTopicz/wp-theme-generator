@@ -83,6 +83,20 @@ describe('buildThemeJSON', () => {
     expect(json.styles.color.background).toContain('--wp--preset--color--primary')
     expect(json.styles.color.text).toContain('--wp--preset--color--secondary')
   })
+
+  it('uses spacing scale presets in px and enables padding and margin', () => {
+    const json = JSON.parse(buildThemeJSON(manifest))
+    expect(json.settings.spacing.padding).toBe(true)
+    expect(json.settings.spacing.margin).toBe(true)
+    const slugs = json.settings.spacing.spacingSizes.map((e: { slug: string }) => e.slug)
+    expect(slugs).toEqual(['20', '40', '60', '80', '120', '160'])
+  })
+
+  it('defaults content width to 860px when layout is omitted', () => {
+    const { layout: _l, ...m } = manifest
+    const json = JSON.parse(buildThemeJSON(m as ThemeManifest))
+    expect(json.settings.layout.contentSize).toBe('860px')
+  })
 })
 
 describe('buildTemplateFile', () => {

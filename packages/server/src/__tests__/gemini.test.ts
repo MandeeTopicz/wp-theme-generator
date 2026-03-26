@@ -1,86 +1,103 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GeminiProvider } from '../ai/gemini'
 
-// Mock @google/generative-ai
 const mockGenerateContent = vi.fn()
-const mockGetGenerativeModel = vi.fn(() => ({
-  generateContent: mockGenerateContent,
-}))
 
-vi.mock('@google/generative-ai', () => ({
-  GoogleGenerativeAI: vi.fn(() => ({
-    getGenerativeModel: mockGetGenerativeModel,
-  })),
-}))
-
-const validDesignSpecJson = JSON.stringify({
-  name: 'Test',
-  slug: 'test',
-  colors: [{ name: 'Primary', slug: 'primary', color: '#000' }],
-  typography: { fontFamilies: [{ name: 'Inter', slug: 'inter', fontFamily: 'Inter' }] },
-  layout: { contentSize: '620px', wideSize: '1200px' },
-  designNarrative: 'Bold',
-  styleVariations: [],
-  copyStrings: {
-    heroHeading: 'Welcome',
-    heroSubheading: 'Bold and modern',
-    ctaHeading: 'Get Started',
-    ctaDescription: 'Start building today',
-    ctaButtonText: 'Learn More',
-    sectionHeading: 'Features',
-    aboutHeading: 'About Us',
-    aboutDescription: 'We build great themes',
-    notFoundMessage: 'Page not found',
-    copyright: '2026 Test',
-    featureItems: [{ title: 'Fast', description: 'Lightning quick' }],
-  },
+vi.mock('@google/generative-ai', () => {
+  return {
+    GoogleGenerativeAI: class {
+      constructor() {}
+      getGenerativeModel() {
+        return { generateContent: mockGenerateContent }
+      }
+    },
+  }
 })
 
-beforeEach(() => {
-  vi.clearAllMocks()
-})
+function makeResponse(text: string) {
+  return { response: { text: () => text } }
+}
 
 describe('GeminiProvider', () => {
-  it('throws on missing GEMINI_API_KEY', () => {
-    const origKey = process.env.GEMINI_API_KEY
+  beforeEach(() => {
+    mockGenerateContent.mockReset()
+    process.env.GEMINI_API_KEY = 'test-key'
+  })
+
+  it('throws on missing API key', () => {
+    const savedKey = process.env.GEMINI_API_KEY
     delete process.env.GEMINI_API_KEY
-    expect(() => new GeminiProvider()).toThrow('GEMINI_API_KEY is required')
-    process.env.GEMINI_API_KEY = origKey
+    expect(() => new GeminiProvider()).toThrow('GEMINI_API_KEY')
+    process.env.GEMINI_API_KEY = savedKey
   })
 
-  it('has generateDesignSpec method', () => {
+  it('complete() returns text from API response', async () => {
+    mockGenerateContent.mockResolvedValueOnce(makeResponse('{"hello":"world"}'))
     const provider = new GeminiProvider('test-key')
-    expect(typeof provider.generateDesignSpec).toBe('function')
+    const result = await provider.complete('system prompt', 'user message')
+    expect(result).toBe('{"hello":"world"}')
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1)
   })
 
-  it('strips markdown code fences from response', async () => {
-    mockGenerateContent.mockResolvedValue({
-      response: { text: () => '```json\n' + validDesignSpecJson + '\n```' },
-    })
+  it('complete() strips code fences from response', async () => {
+    mockGenerateContent.mockResolvedValueOnce(makeResponse('```json\n{"hello":"world"}\n```'))
     const provider = new GeminiProvider('test-key')
-    const result = await provider.generateDesignSpec({
-      prompt: 'test', description: 'test', siteType: 'blog',
-    })
-    expect(result.name).toBe('Test')
+    const result = await provider.complete('system', 'user')
+    expect(result).toBe('{"hello":"world"}')
   })
 
-  it('retries on ParseError with error appended to prompt', async () => {
+  it('complete() retries on 429 and succeeds', async () => {
+    const rateLimitError = Object.assign(new Error('rate limited'), { status: 429 })
     mockGenerateContent
-      .mockResolvedValueOnce({
-        response: { text: () => 'not valid json' },
-      })
-      .mockResolvedValueOnce({
-        response: { text: () => validDesignSpecJson },
-      })
+      .mockRejectedValueOnce(rateLimitError)
+      .mockResolvedValueOnce(makeResponse('{"ok":true}'))
+
     const provider = new GeminiProvider('test-key')
-    const result = await provider.generateDesignSpec({
-      prompt: 'test', description: 'test', siteType: 'blog',
-    })
-    expect(result.name).toBe('Test')
+    const result = await provider.complete('system', 'user')
+    expect(result).toBe('{"ok":true}')
     expect(mockGenerateContent).toHaveBeenCalledTimes(2)
-    // Second call should contain error message in prompt
-    const secondCall = mockGenerateContent.mock.calls[1]![0]
-    const userText = secondCall.contents[0].parts[0].text as string
-    expect(userText).toContain('Previous attempt failed')
+  }, 10000)
+
+  it('complete() throws after 3 rate limit failures', async () => {
+    const rateLimitError = Object.assign(new Error('rate limited'), { status: 429 })
+    mockGenerateContent
+      .mockRejectedValueOnce(rateLimitError)
+      .mockRejectedValueOnce(rateLimitError)
+      .mockRejectedValueOnce(rateLimitError)
+
+    const provider = new GeminiProvider('test-key')
+    await expect(provider.complete('system', 'user')).rejects.toThrow('rate limited')
+  }, 15000)
+
+  it('iterateTheme() returns parsed iteration result', async () => {
+    const iterResult = {
+      templates: [{ name: 'index.html', content: '<!-- wp:paragraph --><p>updated</p><!-- /wp:paragraph -->' }],
+    }
+    mockGenerateContent.mockResolvedValueOnce(makeResponse(JSON.stringify(iterResult)))
+
+    const provider = new GeminiProvider('test-key')
+    const result = await provider.iterateTheme(
+      { templates: [], templateParts: [], patterns: [] },
+      'Make the hero bigger',
+    )
+    expect(result.templates).toHaveLength(1)
+    expect(result.templates![0]!.name).toBe('index.html')
+  })
+
+  it('iterateTheme() retries on parse failure', async () => {
+    const iterResult = {
+      templateParts: [{ name: 'header.html', content: '<!-- wp:group --><!-- /wp:group -->' }],
+    }
+    mockGenerateContent
+      .mockResolvedValueOnce(makeResponse('not valid json'))
+      .mockResolvedValueOnce(makeResponse(JSON.stringify(iterResult)))
+
+    const provider = new GeminiProvider('test-key')
+    const result = await provider.iterateTheme(
+      { templates: [], templateParts: [], patterns: [] },
+      'Update the header',
+    )
+    expect(result.templateParts![0]!.name).toBe('header.html')
+    expect(mockGenerateContent).toHaveBeenCalledTimes(2)
   })
 })

@@ -50,7 +50,7 @@ export default function StepReview({ form, isLoading, onSubmit }: Props) {
       </div>
 
       <p className="text-text3 text-base text-center">
-        Estimated generation time: ~10-20 seconds
+        Please allow a few minutes for generation time
       </p>
 
       <button

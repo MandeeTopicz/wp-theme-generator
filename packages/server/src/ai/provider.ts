@@ -1,40 +1,15 @@
-import type {
-  GenerateRequest,
-  ColorPaletteEntry,
-  ThemeTypography,
-  ThemeLayout,
-  CopyStrings,
-} from '@wp-theme-gen/shared'
 import { AnthropicProvider } from './anthropic'
 import { GeminiProvider } from './gemini'
-
-export interface DesignSpec {
-  name: string
-  slug: string
-  archetype?: string
-  colors: ColorPaletteEntry[]
-  typography: ThemeTypography
-  layout: ThemeLayout
-  designNarrative: string
-  copyTone?: string
-  copyStrings: CopyStrings
-  styleVariations: {
-    title: string
-    slug: string
-    colors: ColorPaletteEntry[]
-  }[]
-}
-
-export interface IterationResult {
-  templates?: { name: string; content: string }[]
-  templateParts?: { name: string; content: string }[]
-  patterns?: { name: string; content: string }[]
-}
+import type { IterationResult } from './outputParser'
 
 export interface AIProvider {
-  generateDesignSpec(request: GenerateRequest): Promise<DesignSpec>
+  complete(systemPrompt: string, userMessage: string): Promise<string>
   iterateTheme(
-    manifest: { templates: { name: string; content: string }[]; templateParts: { name: string; content: string }[]; patterns: { name: string; content: string }[] },
+    manifest: {
+      templates: { name: string; content: string }[]
+      templateParts: { name: string; content: string }[]
+      patterns: { name: string; content: string }[]
+    },
     instruction: string,
   ): Promise<IterationResult>
 }
@@ -44,10 +19,8 @@ export interface CreateAIProviderOptions {
   apiKey?: string
 }
 
-export function createAIProvider(
-  options: CreateAIProviderOptions = {},
-): AIProvider {
-  const provider = options.provider ?? process.env.AI_PROVIDER ?? 'gemini'
+export function createAIProvider(options: CreateAIProviderOptions = {}): AIProvider {
+  const provider = options.provider ?? process.env.AI_PROVIDER ?? 'anthropic'
 
   if (provider === 'gemini') {
     return new GeminiProvider(options.apiKey)
@@ -63,9 +36,7 @@ export function createAIProvider(
 
   const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    throw new Error(
-      'ANTHROPIC_API_KEY is required. Set it in your environment or .env file.',
-    )
+    throw new Error('ANTHROPIC_API_KEY is required. Set it in your environment or .env file.')
   }
 
   return new AnthropicProvider(apiKey)

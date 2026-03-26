@@ -22,8 +22,8 @@ Text Domain: ${manifest.slug}
 body { overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 img { max-width: 100%; height: auto; display: block; }
 
-/* Constrain content inside full-width sections */
-.wp-block-group.alignfull > :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
+/* Constrain direct children of full-bleed groups — exclude alignwide (inner layout wrappers) */
+.wp-block-group.alignfull > :where(:not(.alignleft):not(.alignright):not(.alignfull):not(.alignwide)) {
   max-width: var(--wp--style--global--content-size, 650px);
   margin-left: auto;
   margin-right: auto;
@@ -76,10 +76,10 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   opacity: 0.8;
 }
 
-/* ── Featured images inside cards ─────────────────── */
+/* Featured images: natural height; avoid height:100% stretching parent flex rows to viewport height */
 .wp-block-post-featured-image img {
   width: 100%;
-  height: 100%;
+  height: auto;
   object-fit: cover;
 }
 
@@ -97,7 +97,7 @@ html { scroll-behavior: smooth; }
 export function buildThemeJSON(manifest: ThemeManifest): string {
   const colors = manifest.colors ?? []
   const fontFamilies = manifest.typography?.fontFamilies ?? []
-  const contentSize = manifest.layout?.contentSize ?? '620px'
+  const contentSize = manifest.layout?.contentSize ?? '860px'
   const wideSize = manifest.layout?.wideSize ?? '1200px'
 
   const templates = manifest.templates
@@ -195,24 +195,26 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           fontFamily: f.fontFamily,
         })),
         fontSizes: [
-          { slug: 'small', size: '0.875rem', name: 'Small' },
-          { slug: 'base', size: '1.0625rem', name: 'Base' },
-          { slug: 'medium', size: '1.25rem', name: 'Medium' },
-          { slug: 'large', size: '2rem', name: 'Large' },
-          { slug: 'x-large', size: '3rem', name: 'Extra Large' },
-          { slug: 'hero', size: 'clamp(2.5rem, 6vw, 5rem)', name: 'Hero' },
+          { slug: 'sm', size: '14px', name: 'Small' },
+          { slug: 'md', size: '16px', name: 'Medium' },
+          { slug: 'lg', size: '20px', name: 'Large' },
+          { slug: 'xl', size: '28px', name: 'Extra large' },
+          { slug: '2xl', size: '40px', name: '2X large' },
+          { slug: '3xl', size: '56px', name: '3X large' },
         ],
       },
       spacing: {
         units: ['px', 'em', 'rem', 'vh', 'vw', '%'],
+        padding: true,
+        margin: true,
         blockGap: true,
         spacingSizes: [
-          { name: 'XSmall', slug: '20', size: '0.5rem' },
-          { name: 'Small', slug: '30', size: '1rem' },
-          { name: 'Medium', slug: '40', size: '2rem' },
-          { name: 'Large', slug: '50', size: '4rem' },
-          { name: 'XLarge', slug: '60', size: '7rem' },
-          { name: '2XLarge', slug: '70', size: '10rem' },
+          { name: '20', slug: '20', size: '20px' },
+          { name: '40', slug: '40', size: '40px' },
+          { name: '60', slug: '60', size: '60px' },
+          { name: '80', slug: '80', size: '80px' },
+          { name: '120', slug: '120', size: '120px' },
+          { name: '160', slug: '160', size: '160px' },
         ],
       },
       layout: {
@@ -230,16 +232,17 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           text: `var(--wp--preset--color--${textSlug})`,
         },
         typography: {
-          lineHeight: '1.6',
+          lineHeight: '1.7',
+          fontSize: 'var(--wp--preset--font-size--md)',
           textTransform: 'none',
         },
         spacing: {
-          blockGap: '3rem',
+          blockGap: 'var(--wp--preset--spacing--60)',
           padding: {
             top: '0',
-            right: '2.5rem',
+            right: '0',
             bottom: '0',
-            left: '2.5rem',
+            left: '0',
           },
         },
         elements: {
@@ -270,20 +273,21 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
             typography: {
               fontSize: 'clamp(2.5rem, 6vw, 5rem)',
               letterSpacing: '-0.03em',
-              lineHeight: '1.1',
+              lineHeight: '1.2',
             },
           },
           h2: {
             typography: {
-              fontSize: '2rem',
-              letterSpacing: '-0.01em',
+              fontSize: 'var(--wp--preset--font-size--xl)',
+              letterSpacing: '-0.02em',
               lineHeight: '1.2',
             },
           },
           h3: {
             typography: {
-              fontSize: '1.5rem',
-              lineHeight: '1.3',
+              fontSize: 'var(--wp--preset--font-size--lg)',
+              letterSpacing: '-0.01em',
+              lineHeight: '1.2',
             },
           },
           button: {
@@ -309,6 +313,26 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           },
         },
         blocks: {
+          'core/group': {
+            spacing: {
+              padding: {
+                top: '60px',
+                bottom: '60px',
+                left: '40px',
+                right: '40px',
+              },
+            },
+          },
+          'core/cover': {
+            spacing: {
+              padding: {
+                top: '60px',
+                bottom: '60px',
+                left: '40px',
+                right: '40px',
+              },
+            },
+          },
           'core/navigation': {
             color: { text: `var(--wp--preset--color--${textSlug})` },
             typography: { textTransform: 'none', fontWeight: '500' },
@@ -458,16 +482,31 @@ function fixBlockMarkup(content: string): string {
     },
   )
 
-  // Fix wp:cover blocks missing layout constraint on inner content.
-  // Covers with align:"full" need their inner wp:group to have constrained layout.
-  // We can't easily fix nesting, but we can ensure the cover itself has proper align.
+  // Covers: minimum height (px) and sensible full-width align when implied by vh height.
   content = content.replace(
-    /<!--\s*wp:cover\s+(\{[^]*?\})\s*-->/g,
-    (_match, attrsStr: string) => {
+    /<!--\s*wp:cover\s*(?:(\{[^]*?\}))?\s*-->/g,
+    (_match, attrsStr?: string) => {
       try {
-        const attrs = JSON.parse(attrsStr) as Record<string, unknown>
-        // Ensure covers that look full-width have align:"full"
-        if (!attrs.align && (attrs.minHeightUnit === 'vh' || (typeof attrs.minHeight === 'number' && attrs.minHeight >= 50))) {
+        const attrs = (attrsStr ? JSON.parse(attrsStr) : {}) as Record<string, unknown>
+        const origUnit = attrs.minHeightUnit as string | undefined
+        const origH = attrs.minHeight
+        const parsedH =
+          typeof origH === 'number'
+            ? origH
+            : typeof origH === 'string'
+              ? parseFloat(origH)
+              : NaN
+        const needsMinPx =
+          origUnit !== 'px' || !Number.isFinite(parsedH) || parsedH < 600
+        if (needsMinPx) {
+          attrs.minHeight = 600
+          attrs.minHeightUnit = 'px'
+        }
+        if (
+          !attrs.align &&
+          (origUnit === 'vh' ||
+            (typeof origH === 'number' && origH >= 50))
+        ) {
           attrs.align = 'full'
         }
         return `<!-- wp:cover ${JSON.stringify(attrs)} -->`

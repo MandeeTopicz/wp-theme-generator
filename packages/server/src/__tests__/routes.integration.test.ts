@@ -1,64 +1,104 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 import request from 'supertest'
 import type { ThemeManifest } from '@wp-theme-gen/shared'
-import type { DesignSpec } from '../ai/provider'
 
-const mockDesignSpec: DesignSpec = {
+const mockComplete = vi.fn()
+
+vi.mock('../ai/provider', () => ({
+  createAIProvider: () => ({
+    complete: mockComplete,
+    iterateTheme: vi.fn(),
+  }),
+}))
+
+// Minimal valid design brief JSON
+const mockBriefJson = JSON.stringify({
   name: 'Test Theme',
   slug: 'test-theme',
-  colors: [{ name: 'Primary', slug: 'primary', color: '#1a1a1a' }],
+  colors: [
+    { name: 'Base', slug: 'base', color: '#0d0d0d' },
+    { name: 'Surface', slug: 'surface', color: '#1a1a1a' },
+    { name: 'Foreground', slug: 'foreground', color: '#f5f5f5' },
+    { name: 'Muted', slug: 'muted', color: '#888888' },
+    { name: 'Accent', slug: 'accent', color: '#ff6b35' },
+    { name: 'Accent Foreground', slug: 'accent-foreground', color: '#ffffff' },
+  ],
   typography: {
     fontFamilies: [
-      { name: 'Inter', slug: 'inter', fontFamily: 'Inter, sans-serif' },
+      { name: 'Syne', slug: 'heading', fontFamily: 'Syne, sans-serif' },
+      { name: 'Inter', slug: 'body', fontFamily: 'Inter, sans-serif' },
     ],
   },
-  layout: { contentSize: '620px', wideSize: '1200px' },
-  designNarrative: 'A bold theme',
-  styleVariations: [],
+  layout: { contentSize: '860px', wideSize: '1200px' },
+  layoutPersonality: {
+    heroStyle: 'full-bleed-cover',
+    heroHeight: '85vh',
+    headerStyle: 'solid-bar',
+    sectionsOrder: ['features', 'latest-posts', 'cta'],
+    visualTension: 'Strong contrast between display and body type.',
+  },
   copyStrings: {
-    heroHeading: 'Welcome',
-    heroSubheading: 'A bold theme for your site',
-    ctaHeading: 'Get Started',
-    ctaDescription: 'Start building today',
-    ctaButtonText: 'Learn More',
-    sectionHeading: 'Features',
-    aboutHeading: 'About Us',
-    aboutDescription: 'We build great themes',
-    notFoundMessage: 'Page not found',
-    copyright: '2026 Test Theme',
+    heroHeading: 'Ideas worth building',
+    heroSubheading: 'A platform for thinkers and makers who refuse to settle.',
+    ctaHeading: 'Start something real',
+    ctaDescription: 'Join a community of creators building things that matter.',
+    ctaButtonText: 'Dive In',
+    sectionHeading: 'Fresh perspectives',
+    aboutHeading: 'What we stand for',
+    aboutDescription: 'We believe great ideas deserve great execution. This is a space for those who care.',
+    notFoundMessage: 'This page took a wrong turn. Head back home.',
+    copyright: '© 2026 Test Theme. All rights reserved.',
     featureItems: [
-      { title: 'Fast', description: 'Lightning quick' },
+      { title: 'Built with care', description: 'Every detail considered for the best possible experience.' },
+      { title: 'Fast by default', description: 'Performance baked in from the start, not bolted on later.' },
+      { title: 'Yours to own', description: 'No lock-in, no nonsense. Your content, your rules.' },
     ],
   },
-}
+  styleVariations: [
+    { title: 'Dark', slug: 'dark', colors: [
+      { name: 'Base', slug: 'base', color: '#0d0d0d' },
+      { name: 'Surface', slug: 'surface', color: '#1a1a1a' },
+      { name: 'Foreground', slug: 'foreground', color: '#f5f5f5' },
+      { name: 'Muted', slug: 'muted', color: '#888888' },
+      { name: 'Accent', slug: 'accent', color: '#ff6b35' },
+      { name: 'Accent Foreground', slug: 'accent-foreground', color: '#ffffff' },
+    ]},
+  ],
+})
+
+const mockHeaderFooterJson = JSON.stringify({
+  header: '<!-- wp:group {"tagName":"header","align":"full","backgroundColor":"base","layout":{"type":"flex","justifyContent":"space-between","alignItems":"center"}} --><header class="wp-block-group alignfull has-base-background-color has-background"><!-- wp:site-title /--><!-- wp:navigation {"ariaLabel":"Main navigation"} /--></header><!-- /wp:group -->',
+  footer: '<!-- wp:group {"tagName":"footer","align":"full","backgroundColor":"surface"} --><footer class="wp-block-group alignfull has-surface-background-color has-background"><!-- wp:paragraph {"textColor":"muted"} --><p class="has-muted-color has-text-color">© 2026 Test Theme.</p><!-- /wp:paragraph --></footer><!-- /wp:group -->',
+})
+
+const mockHomepageJson = JSON.stringify({
+  indexTemplate: '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->\n<!-- wp:cover {"minHeight":85,"minHeightUnit":"vh","align":"full"} --><div class="wp-block-cover alignfull"><div class="wp-block-cover__inner-container"><!-- wp:heading {"level":1} --><h1>Ideas worth building</h1><!-- /wp:heading --></div></div><!-- /wp:cover -->\n<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+  heroPattern: '<?php\n/**\n * Title: Hero\n * Slug: test-theme/hero\n * Categories: featured\n * Block Types: core/post-content\n */\n?>\n<!-- wp:cover {"minHeight":85,"minHeightUnit":"vh","align":"full"} --><div class="wp-block-cover alignfull"><div class="wp-block-cover__inner-container"><!-- wp:heading {"level":1} --><h1>Ideas worth building</h1><!-- /wp:heading --></div></div><!-- /wp:cover -->',
+})
+
+const mockInnerTemplatesJson = JSON.stringify({
+  single: '<!-- wp:template-part {"slug":"header","tagName":"header"} /--><!-- wp:post-content /--><!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+  page: '<!-- wp:template-part {"slug":"header","tagName":"header"} /--><!-- wp:post-content /--><!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+  archive: '<!-- wp:template-part {"slug":"header","tagName":"header"} /--><!-- wp:query {"perPage":9} --><!-- /wp:query --><!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+  '404': '<!-- wp:template-part {"slug":"header","tagName":"header"} /--><!-- wp:heading --><h1>404</h1><!-- /wp:heading --><!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->',
+})
 
 const mockManifest: ThemeManifest = {
   name: 'Test Theme',
   slug: 'test-theme',
   themeJson: { version: 3 },
   templates: [
-    {
-      name: 'index.html',
-      content: '<!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph -->',
-    },
+    { name: 'index.html', content: '<!-- wp:paragraph --><p>hi</p><!-- /wp:paragraph -->' },
   ],
   templateParts: [],
   patterns: [],
   files: ['style.css', 'theme.json', 'templates/index.html'],
-  colors: [{ name: 'Primary', slug: 'primary', color: '#1a1a1a' }],
+  colors: [{ name: 'Base', slug: 'base', color: '#0d0d0d' }],
   typography: {
-    fontFamilies: [
-      { name: 'Inter', slug: 'inter', fontFamily: 'Inter, sans-serif' },
-    ],
+    fontFamilies: [{ name: 'Inter', slug: 'body', fontFamily: 'Inter, sans-serif' }],
   },
-  layout: { contentSize: '620px', wideSize: '1200px' },
+  layout: { contentSize: '860px', wideSize: '1200px' },
 }
-
-vi.mock('../ai/provider', () => ({
-  createAIProvider: () => ({
-    generateDesignSpec: vi.fn().mockResolvedValue(mockDesignSpec),
-  }),
-}))
 
 let app: typeof import('../index').default
 
@@ -74,7 +114,6 @@ const validBody = {
   siteType: 'portfolio',
   themeName: 'Test Theme',
   themeSlug: 'test-theme',
-  templateId: 'starter',
 }
 
 function parseSSEText(text: string): { event: string; data: unknown }[] {
@@ -94,8 +133,18 @@ function parseSSEText(text: string): { event: string; data: unknown }[] {
   return events
 }
 
+function setupMockPipeline() {
+  mockComplete
+    .mockResolvedValueOnce(mockBriefJson)
+    .mockResolvedValueOnce(mockHeaderFooterJson)
+    .mockResolvedValueOnce(mockHomepageJson)
+    .mockResolvedValueOnce(mockInnerTemplatesJson)
+}
+
 describe('POST /api/generate', () => {
   it('returns SSE stream with progress and complete events', async () => {
+    setupMockPipeline()
+
     const res = await request(app)
       .post('/api/generate')
       .send(validBody)
@@ -106,6 +155,7 @@ describe('POST /api/generate', () => {
         r.on('data', (chunk: string) => { data += chunk })
         r.on('end', () => cb(null, data))
       })
+
     expect(res.status).toBe(200)
     const events = parseSSEText(res.body as unknown as string)
     const progressEvents = events.filter((e) => e.event === 'progress')
@@ -144,7 +194,8 @@ describe('POST /api/generate', () => {
 
 describe('GET /api/download/:sessionId', () => {
   it('returns ZIP binary for valid sessionId', async () => {
-    // First generate to get a sessionId (SSE response)
+    setupMockPipeline()
+
     const genRes = await request(app)
       .post('/api/generate')
       .send(validBody)
@@ -155,6 +206,7 @@ describe('GET /api/download/:sessionId', () => {
         r.on('data', (chunk: string) => { data += chunk })
         r.on('end', () => cb(null, data))
       })
+
     const events = parseSSEText(genRes.body as unknown as string)
     const complete = events.find((e) => e.event === 'complete')
     const { sessionId } = complete!.data as { sessionId: string }
@@ -182,10 +234,7 @@ describe('POST /api/validate', () => {
     const badManifest = {
       ...mockManifest,
       templates: [
-        {
-          name: 'index.html',
-          content: '<!-- wp:html --><div>bad</div><!-- /wp:html -->',
-        },
+        { name: 'index.html', content: '<!-- wp:html --><div>bad</div><!-- /wp:html -->' },
       ],
     }
     const res = await request(app).post('/api/validate').send(badManifest)

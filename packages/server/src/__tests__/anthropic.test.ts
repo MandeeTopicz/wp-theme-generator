@@ -1,35 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AnthropicProvider } from '../ai/anthropic'
-import type { DesignSpec } from '../ai/provider'
 
-const validDesignSpec: DesignSpec = {
-  name: 'Test Theme',
-  slug: 'test-theme',
-  colors: [{ name: 'Primary', slug: 'primary', color: '#1a1a1a' }],
-  typography: {
-    fontFamilies: [
-      { name: 'Inter', slug: 'inter', fontFamily: 'Inter, sans-serif' },
-    ],
-  },
-  layout: { contentSize: '620px', wideSize: '1200px' },
-  designNarrative: 'A bold theme',
-  styleVariations: [],
-  copyStrings: {
-    heroHeading: 'Welcome',
-    heroSubheading: 'A bold theme for your site',
-    ctaHeading: 'Get Started',
-    ctaDescription: 'Start building today',
-    ctaButtonText: 'Learn More',
-    sectionHeading: 'Features',
-    aboutHeading: 'About Us',
-    aboutDescription: 'We build great themes',
-    notFoundMessage: 'Page not found',
-    copyright: '2026 Test Theme',
-    featureItems: [
-      { title: 'Fast', description: 'Lightning quick' },
-    ],
-  },
-}
+const validIterationJson = JSON.stringify({
+  templates: [{ name: 'index.html', content: '<!-- wp:paragraph --><p>ok</p><!-- /wp:paragraph -->' }],
+})
 
 const mockCreate = vi.fn()
 
@@ -65,42 +39,53 @@ function makeResponse(text: string) {
   return { content: [{ type: 'text', text }] }
 }
 
+const emptyManifest = {
+  templates: [] as { name: string; content: string }[],
+  templateParts: [] as { name: string; content: string }[],
+  patterns: [] as { name: string; content: string }[],
+}
+
 describe('AnthropicProvider', () => {
   beforeEach(() => {
     mockCreate.mockReset()
   })
 
-  it('generateDesignSpec returns a DesignSpec on success', async () => {
-    mockCreate.mockResolvedValueOnce(
-      makeResponse(JSON.stringify(validDesignSpec)),
-    )
+  it('complete returns model text on success', async () => {
+    mockCreate.mockResolvedValueOnce(makeResponse('model output'))
     const provider = new AnthropicProvider('sk-test')
-    const result = await provider.generateDesignSpec({ prompt: 'test' })
-    expect(result.name).toBe('Test Theme')
-    expect(result.slug).toBe('test-theme')
+    const result = await provider.complete('system text', 'user text')
+    expect(result).toBe('model output')
+    expect(mockCreate).toHaveBeenCalledTimes(1)
   })
 
-  it('retries once on ParseError and succeeds on second attempt', async () => {
+  it('iterateTheme returns parsed IterationResult on success', async () => {
+    mockCreate.mockResolvedValueOnce(makeResponse(validIterationJson))
+    const provider = new AnthropicProvider('sk-test')
+    const result = await provider.iterateTheme(emptyManifest, 'update the hero')
+    expect(result.templates).toHaveLength(1)
+    expect(result.templates![0]!.name).toBe('index.html')
+  })
+
+  it('iterateTheme retries on ParseError and succeeds on second attempt', async () => {
     mockCreate
       .mockResolvedValueOnce(makeResponse('not valid json'))
-      .mockResolvedValueOnce(makeResponse(JSON.stringify(validDesignSpec)))
+      .mockResolvedValueOnce(makeResponse(validIterationJson))
 
     const provider = new AnthropicProvider('sk-test')
-    const result = await provider.generateDesignSpec({ prompt: 'test' })
-    expect(result.name).toBe('Test Theme')
+    const result = await provider.iterateTheme(emptyManifest, 'fix it')
+    expect(result.templates).toHaveLength(1)
     expect(mockCreate).toHaveBeenCalledTimes(2)
   })
 
-  it('throws after 2 failed parse attempts', async () => {
+  it('throws after 3 failed parse attempts', async () => {
     mockCreate
       .mockResolvedValueOnce(makeResponse('bad json 1'))
       .mockResolvedValueOnce(makeResponse('bad json 2'))
+      .mockResolvedValueOnce(makeResponse('bad json 3'))
 
     const provider = new AnthropicProvider('sk-test')
-    await expect(
-      provider.generateDesignSpec({ prompt: 'test' }),
-    ).rejects.toThrow()
-    expect(mockCreate).toHaveBeenCalledTimes(2)
+    await expect(provider.iterateTheme(emptyManifest, 'x')).rejects.toThrow()
+    expect(mockCreate).toHaveBeenCalledTimes(3)
   })
 
   it('retries on 429 with backoff', async () => {
@@ -109,16 +94,15 @@ describe('AnthropicProvider', () => {
 
     mockCreate
       .mockRejectedValueOnce(rateLimitError)
-      .mockResolvedValueOnce(makeResponse(JSON.stringify(validDesignSpec)))
+      .mockResolvedValueOnce(makeResponse(validIterationJson))
 
     const provider = new AnthropicProvider('sk-test')
-    const result = await provider.generateDesignSpec({ prompt: 'test' })
-    expect(result.name).toBe('Test Theme')
+    const result = await provider.iterateTheme(emptyManifest, 'x')
+    expect(result.templates).toHaveLength(1)
     expect(mockCreate).toHaveBeenCalledTimes(2)
   }, 10000)
 
   it('throws actionable message on 500 error', async () => {
-    // Import the mocked module to get the mock class
     const Anthropic = (await import('@anthropic-ai/sdk')).default
     const apiError = new (
       Anthropic as unknown as { APIError: new (status: number, message: string) => Error }
@@ -127,9 +111,7 @@ describe('AnthropicProvider', () => {
     mockCreate.mockRejectedValueOnce(apiError)
 
     const provider = new AnthropicProvider('sk-test')
-    await expect(
-      provider.generateDesignSpec({ prompt: 'test' }),
-    ).rejects.toThrow('Claude API error')
+    await expect(provider.iterateTheme(emptyManifest, 'x')).rejects.toThrow('Claude API error')
   })
 
   it('throws on missing API key', () => {
