@@ -216,7 +216,16 @@ const innerTemplatesSchema = z.object({
 export type InnerTemplatesResult = z.infer<typeof innerTemplatesSchema>
 
 export function parseInnerTemplates(raw: string): InnerTemplatesResult {
-  const parsed = parseJson(raw, 'inner templates')
+  const parsed = parseJson(raw, 'inner templates') as Record<string, unknown>
+
+  // Recovery: AI sometimes returns arrays of blocks instead of a single string
+  for (const key of ['single', 'page', 'archive', '404']) {
+    const val = parsed[key]
+    if (Array.isArray(val)) {
+      parsed[key] = val.join('\n')
+    }
+  }
+
   const result = innerTemplatesSchema.safeParse(parsed)
 
   if (!result.success) {

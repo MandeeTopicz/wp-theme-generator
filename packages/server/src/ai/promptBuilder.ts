@@ -491,13 +491,14 @@ wp:group constrained, center-aligned, generous padding top and bottom:
   wp:buttons centered: single button "Go Home" with accent background linking to /
 Footer template-part.
 
-OUTPUT SCHEMA:
+OUTPUT SCHEMA — each value must be a single STRING (not an array), containing the full template markup:
 {
-  "single": "full templates/single.html content",
-  "page": "full templates/page.html content",
-  "archive": "full templates/archive.html content",
-  "404": "full templates/404.html content"
-}`
+  "single": "full templates/single.html content as one string",
+  "page": "full templates/page.html content as one string",
+  "archive": "full templates/archive.html content as one string",
+  "404": "full templates/404.html content as one string"
+}
+CRITICAL: Each value is a STRING, not an array. Concatenate all blocks into one string per template.`
 }
 
 export function buildInnerTemplatesUserPrompt(brief: DesignBriefForMarkup): string {
