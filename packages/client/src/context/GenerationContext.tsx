@@ -27,7 +27,17 @@ interface GenerateError {
 }
 
 type GenerationStatus = 'idle' | 'generating' | 'complete' | 'error'
-type GenerationStep = 'design' | 'building' | 'validating' | 'packaging' | null
+
+/** Matches server SSE progress `step` (pipeline + assemble/validate/package). */
+type GenerationStep =
+  | 'brief'
+  | 'header-footer'
+  | 'homepage'
+  | 'inner-templates'
+  | 'assembling'
+  | 'validating'
+  | 'packaging'
+  | null
 
 interface GenerationState {
   status: GenerationStatus
@@ -74,8 +84,8 @@ export function GenerationProvider({ children }: { children: ReactNode }) {
 
   const generate = useCallback((body: GenerateBody) => {
     setStatus('generating')
-    setStep('design')
-    setStepMessage('Designing color system...')
+    setStep('brief')
+    setStepMessage('Crafting design brief...')
     setError(null)
     setResult(null)
 

@@ -67,7 +67,7 @@ PART 3 — LAYOUT PERSONALITY
 heroStyle — pick one:
 - "full-bleed-cover": Full viewport-height cover block with overlay text
 - "split-layout": Two-column split, text left + image right
-- "typography-hero": Large display text only, no image
+- "typography-hero": Large display text only, no image, left-aligned
 - "centered-minimal": Centered text block, generous whitespace, single CTA
 
 heroHeight — pick one: "100vh", "85vh", "70vh"
@@ -199,50 +199,60 @@ BLOCK MARKUP RULES — FOLLOW EXACTLY:
 3. Spacing uses preset slugs only:
    CORRECT: "var(--wp--preset--spacing--80)"
    WRONG: "80px"
-   Available slugs: 20, 40, 60, 80, 120, 160
+   Available slugs: small, medium, large, x-large, xx-large, huge and numeric 20, 40, 60, 80, 120, 160
 
 4. Full-width groups MUST have layout type:
    CORRECT: {"align":"full","layout":{"type":"constrained"}}
    WRONG: {"align":"full"}
 
-5. Text inside full-width sections needs an inner constrained wrapper:
-   <!-- wp:group {"align":"full","backgroundColor":"base","layout":{"type":"constrained"}} -->
-   <div class="wp-block-group alignfull has-base-background-color has-background">
-   <!-- wp:group {"layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--80)","bottom":"var(--wp--preset--spacing--80)"}}}} -->
-   <div class="wp-block-group">
-   <!-- content here -->
-   </div>
-   <!-- /wp:group -->
-   </div>
-   <!-- /wp:group -->
+5. Font families: {"fontFamily":"var(--wp--preset--font-family--heading)"}
 
-6. Font families use slugs: {"fontFamily":"var(--wp--preset--font-family--heading)"}
+6. Font sizes — use ONLY these slugs: small, medium, large, x-large, xx-large, huge
+   CORRECT: {"fontSize":"large"} WRONG: {"fontSize":"lg"}
 
-7. Navigation block:
-   <!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"right"}} /-->
+7. Navigation: <!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"right"}} /-->
 
-HEADER REQUIREMENTS:
-- Outer wrapper: <!-- wp:group {"tagName":"header",...} -->
-- Must contain wp:site-title and wp:navigation
-- Layout: {"type":"flex","justifyContent":"space-between","alignItems":"center"}
+HEADER DESIGN PRINCIPLES — READ CAREFULLY:
 
-For "solid-bar": solid backgroundColor on header group
-For "transparent-overlay": {"style":{"color":{"background":"transparent"}}}
-For "minimal-centered": {"type":"flex","flexWrap":"wrap","justifyContent":"center"}
+The header must look like a real website header, not a colored bar. Study these rules:
 
-EXAMPLE solid-bar header:
-<!-- wp:group {"tagName":"header","align":"full","backgroundColor":"base","layout":{"type":"flex","justifyContent":"space-between","alignItems":"center"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--40)","bottom":"var(--wp--preset--spacing--40)","left":"var(--wp--preset--spacing--60)","right":"var(--wp--preset--spacing--60)"}}}} -->
+- Keep it lightweight: logo left, nav right, generous horizontal padding, minimal vertical padding
+- The header should NOT be a heavy colored block — it should feel like it floats above the page
+- For "solid-bar": use base or surface color, keep it thin (padding top/bottom: var(--wp--preset--spacing--40) max)
+- For "transparent-overlay": no background color, overlaid on hero, text must be light colored to read over hero image
+- Navigation links should NOT be styled with background colors — plain text links only
+- Site title: font-weight 700, use heading font family, modest size (1.1rem to 1.4rem)
+
+CORRECT header structure — logo left, nav right, thin bar:
+<!-- wp:group {"tagName":"header","align":"full","backgroundColor":"base","layout":{"type":"flex","justifyContent":"space-between","alignItems":"center"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--40)","bottom":"var(--wp--preset--spacing--40)","left":"var(--wp--preset--spacing--80)","right":"var(--wp--preset--spacing--80)"}}}} -->
 <header class="wp-block-group alignfull has-base-background-color has-background">
-<!-- wp:site-title {"level":0,"isLink":true,"style":{"typography":{"fontWeight":"700","fontSize":"1.25rem"}}} /-->
-<!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"right","flexWrap":"nowrap"}} /-->
+<!-- wp:site-title {"level":0,"isLink":true,"textColor":"foreground","style":{"typography":{"fontWeight":"700","fontSize":"1.2rem","fontFamily":"var(--wp--preset--font-family--heading)"}}} /-->
+<!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","textColor":"foreground","layout":{"type":"flex","justifyContent":"right","flexWrap":"nowrap"},"style":{"typography":{"fontSize":"0.9rem","fontWeight":"500"}}} /-->
 </header>
 <!-- /wp:group -->
 
-FOOTER REQUIREMENTS:
-- Outer wrapper: <!-- wp:group {"tagName":"footer",...} -->
-- Use surface or inverted background color
-- Include copyright paragraph and optional footer navigation
-- Generous padding top and bottom
+FOOTER DESIGN PRINCIPLES:
+
+- Footer should use surface or a dark version of base as background
+- Two-column layout: copyright left, footer nav right (or single centered column for minimal themes)
+- Keep it simple — copyright text + optional nav links
+- Padding: var(--wp--preset--spacing--80) top and bottom
+- Text size: small (0.875rem)
+- Never add decorative elements, icons, or social media blocks unless explicitly requested
+
+CORRECT footer structure:
+<!-- wp:group {"tagName":"footer","align":"full","backgroundColor":"surface","layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--80)","bottom":"var(--wp--preset--spacing--80)","left":"var(--wp--preset--spacing--80)","right":"var(--wp--preset--spacing--80)"}}}} -->
+<footer class="wp-block-group alignfull has-surface-background-color has-background">
+<!-- wp:group {"layout":{"type":"flex","justifyContent":"space-between","alignItems":"center","flexWrap":"wrap"}} -->
+<div class="wp-block-group">
+<!-- wp:paragraph {"textColor":"muted","style":{"typography":{"fontSize":"0.875rem"}}} -->
+<p class="has-muted-color has-text-color">COPYRIGHT_TEXT</p>
+<!-- /wp:paragraph -->
+<!-- wp:navigation {"ariaLabel":"Footer navigation","overlayMenu":"never","textColor":"muted","layout":{"type":"flex","flexWrap":"wrap"},"style":{"typography":{"fontSize":"0.875rem"}}} /-->
+</div>
+<!-- /wp:group -->
+</footer>
+<!-- /wp:group -->
 
 OUTPUT SCHEMA:
 {
@@ -269,47 +279,111 @@ export function buildHomepageSystemPrompt(): string {
 
 Your output must be ONLY valid JSON — no prose, no markdown, no code fences.
 
-Apply ALL block markup rules from above (no wp:html, preset slugs for colors and spacing, constrained layouts on full-width groups, inner constrained wrappers for text).
+BLOCK MARKUP RULES:
+- NEVER use wp:html
+- Colors: preset slugs only e.g. {"backgroundColor":"accent"} or "var(--wp--preset--color--accent)"
+- Spacing: preset slugs only e.g. "var(--wp--preset--spacing--80)"
+- Full-width groups need layout:{"type":"constrained"}
+- Font sizes: small, medium, large, x-large, xx-large, huge ONLY — never sm/md/lg/xl
+- Font families: {"fontFamily":"var(--wp--preset--font-family--heading)"}
 
-HERO VARIANTS:
+CRITICAL LAYOUT PRINCIPLES — THIS IS WHAT MAKES A THEME LOOK LIKE A REAL WEBSITE:
 
-"full-bleed-cover": wp:cover with minHeight matching heroHeight, align full, overlayColor set.
-EXAMPLE:
-<!-- wp:cover {"minHeight":100,"minHeightUnit":"vh","align":"full","overlayColor":"foreground","dimRatio":60,"isDark":true,"layout":{"type":"constrained"}} -->
-<div class="wp-block-cover alignfull">
-<span aria-hidden="true" class="wp-block-cover__background has-foreground-background-color has-background-dim-60 has-background-dim"></span>
-<div class="wp-block-cover__inner-container">
-<!-- wp:group {"layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--80)","bottom":"var(--wp--preset--spacing--80)"}}}} -->
-<div class="wp-block-group">
-<!-- wp:heading {"level":1,"textAlign":"center","textColor":"accent","style":{"typography":{"fontSize":"clamp(3rem,8vw,7rem)","fontWeight":"800","letterSpacing":"-0.03em","lineHeight":"1.05"}}} -->
-<h1 class="wp-block-heading has-accent-color has-text-color has-text-align-center">HERO HEADING HERE</h1>
-<!-- /wp:heading -->
-<!-- wp:paragraph {"textAlign":"center","textColor":"base"} -->
-<p class="has-base-color has-text-color has-text-align-center">Subheading here.</p>
-<!-- /wp:paragraph -->
-</div>
-<!-- /wp:group -->
-</div>
-</div>
-<!-- /wp:cover -->
+Study how Twenty Twenty-Five, Astra, and Hello Elementor themes look. Apply these rules without exception:
 
-"split-layout": wp:columns two 50/50 columns. Left: heading + subheading + button. Right: wp:image or wp:post-featured-image.
-"typography-hero": wp:group, giant heading clamp(4rem,12vw,10rem), no image, accent color decorative line.
-"centered-minimal": centered constrained group ~600px max-width, heading + subheading + button, lots of whitespace.
+1. DO NOT CENTER EVERYTHING
+   - Body text, section headings, feature descriptions: LEFT-ALIGNED
+   - Only center: hero headings on full-bleed covers, CTA sections, stat numbers
+   - Left-aligned content looks professional. Centered content looks like a slideshow.
 
-SECTIONS:
-"features": wp:columns 3 children. Each column: large number or short heading + paragraph description.
-"latest-posts": wp:query perPage 6, grid layout. Each card: featured image + post-title + post-date + post-excerpt.
-"about": two-column or centered, aboutHeading + aboutDescription, use surface background color.
-"cta": full-width accent background, ctaHeading + ctaDescription + wp:buttons block.
-"stats": 3-4 columns, each with huge number heading + label paragraph.
-"portfolio-grid": wp:query grid, minimal thumbnail cards.
+2. CONTENT WIDTH DISCIPLINE
+   - Regular content sections: use layout:{"type":"constrained"} with no align:"full"
+   - Full-width color blocks: ONLY for hero, CTA accent sections, and deliberate color breaks
+   - Most sections should just be a constrained group with padding — not a full-width colored block
 
-INDEX.HTML MUST:
-1. Start with: <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
-2. Include hero section inline
-3. Include each section from sectionsOrder in order
-4. End with: <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
+3. SECTION VARIETY — NO TWO SECTIONS SHOULD LOOK THE SAME
+   - Alternate: white background → surface background → white → accent background
+   - Vary alignment: centered hero → left-aligned features → two-column about → centered CTA
+   - Not every section needs a background color. White space is a design choice.
+
+4. POST CARDS — TITLE BELOW IMAGE, NEVER ON TOP
+   The query loop post template must stack: image THEN title THEN date THEN excerpt.
+   CRITICAL: put {"layout":{"type":"grid","columnCount":3}} on wp:post-template — NOT on wp:query. Without this, WordPress renders a single column.
+
+   CORRECT query loop with 3-column grid:
+   <!-- wp:query {"queryId":1,"query":{"perPage":6,"postType":"post","order":"desc","orderBy":"date","inherit":false},"layout":{"type":"constrained"}} -->
+   <div class="wp-block-query">
+   <!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+   <!-- wp:group {"style":{"border":{"radius":"8px"},"spacing":{"blockGap":"0"}},"backgroundColor":"surface"} -->
+   <div class="wp-block-group has-surface-background-color has-background" style="border-radius:8px">
+   <!-- wp:post-featured-image {"isLink":true,"aspectRatio":"16/9"} /-->
+   <!-- wp:group {"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--40)","right":"var(--wp--preset--spacing--40)","bottom":"var(--wp--preset--spacing--40)","left":"var(--wp--preset--spacing--40)"}}}} -->
+   <div class="wp-block-group">
+   <!-- wp:post-title {"isLink":true,"fontSize":"medium","textColor":"foreground"} /-->
+   <!-- wp:post-date {"textColor":"muted","style":{"typography":{"fontSize":"0.8rem"}}} /-->
+   <!-- wp:post-excerpt {"textColor":"foreground","style":{"typography":{"fontSize":"0.9rem"}}} /-->
+   </div>
+   <!-- /wp:group -->
+   </div>
+   <!-- /wp:group -->
+   <!-- /wp:post-template -->
+   </div>
+   <!-- /wp:query -->
+
+5. HERO VARIANTS — BUILD THEM CORRECTLY:
+
+"full-bleed-cover": wp:cover, minHeight from heroHeight, align full, overlayColor foreground, dimRatio 50-70.
+Content inside: heading (large, can be centered) + subheading + optional button. Use constrained inner group.
+
+"split-layout": wp:columns, NO align full, constrained layout, good padding.
+Left column (60%): large left-aligned heading + subheading paragraph + wp:buttons
+Right column (40%): wp:image with rounded corners or wp:post-featured-image
+This lives inside a normal constrained section, NOT a full-width color block.
+
+"typography-hero": wp:group, constrained, generous padding (var(--wp--preset--spacing--xx-large) top).
+Giant LEFT-ALIGNED heading using clamp(3.5rem,8vw,7rem). NO background color needed.
+Add a thin accent-colored horizontal rule (wp:separator) above or below heading for visual interest.
+Subheading paragraph left-aligned, max-width ~600px. Button left-aligned.
+
+"centered-minimal": wp:group constrained, center-aligned, max content width ~700px.
+Clean heading, short subheading, single CTA button. Lots of top and bottom padding. White background.
+
+6. SECTION PATTERNS — BUILD THEM CORRECTLY:
+
+"features": wp:group with surface background, constrained, good padding.
+  Section heading LEFT-ALIGNED above the columns.
+  wp:columns with 3 wp:column children.
+  Each column: accent-colored large number or icon heading + bold title + body paragraph. LEFT-ALIGNED.
+  No full-width background needed — surface color on the group is enough.
+
+"latest-posts": wp:group, white/base background, constrained.
+  Section heading LEFT-ALIGNED.
+  wp:query with layout:{"type":"constrained"} and perPage 6; inside it wp:post-template MUST have layout:{"type":"grid","columnCount":3}.
+  Use the full query + post-template + card markup from rule 4 above.
+
+"about": wp:group, surface background, constrained, good padding.
+  wp:columns, two columns: text left (60%), optional image right (40%).
+  Left column: aboutHeading (left-aligned, large) + aboutDescription paragraphs.
+  NOT centered. NOT full-width color block.
+
+"cta": wp:group, accent background, align full, constrained inner group, center-aligned content.
+  ctaHeading (large, centered, accent-foreground color) + ctaDescription + wp:buttons centered.
+  This is the ONE section that should be a full-width color block.
+
+"stats": wp:group, base or surface background, constrained.
+  wp:columns 4 children. Each: huge centered number (accent color) + small label below. Clean and minimal.
+
+"testimonials": wp:group, surface background, constrained.
+  wp:columns 3 children. Each column: quote paragraph (italic) + author name (bold, small).
+
+"portfolio-grid": wp:group, base background, constrained.
+  Section heading left-aligned. wp:query constrained + wp:post-template {"layout":{"type":"grid","columnCount":3}}, featured image cards, minimal style.
+
+INDEX.HTML STRUCTURE:
+1. <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+2. Hero section (inline markup per heroStyle)
+3. Each section from sectionsOrder — vary backgrounds, vary alignment
+4. <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
 
 OUTPUT SCHEMA:
 {
@@ -326,10 +400,10 @@ heroPattern must start with:
  * Block Types: core/post-content
  */
 ?>
-then the block markup.`
+then the hero block markup.`
 }
 
-export function buildHomepageUserPrompt(brief: DesignBriefForMarkup, headerMarkup: string): string {
+export function buildHomepageUserPrompt(brief: DesignBriefForMarkup, _headerMarkup: string): string {
   return `Design brief:
 Theme name: ${brief.name}
 Theme slug: ${brief.slug}
@@ -348,7 +422,16 @@ sectionHeading: "${brief.copyStrings.sectionHeading}"
 aboutHeading: "${brief.copyStrings.aboutHeading}"
 aboutDescription: "${brief.copyStrings.aboutDescription}"
 featureItems: ${JSON.stringify(brief.copyStrings.featureItems)}
-Header template-part slug is "header". Reference it as: <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+REMINDERS:
+- Left-align body text and section headings. Only center hero headings and CTA sections.
+- Post card titles go BELOW the featured image, never on top of it.
+- Vary section backgrounds — not every section needs a colored background.
+- The "cta" section is the only full-width accent color block.
+- Use the correct post card structure with image → title → date → excerpt stacked vertically.
+- Every posts grid: wp:post-template must include {"layout":{"type":"grid","columnCount":3}} (or 2 for narrow layouts) — not on wp:query.
+
+Header template-part slug is "header": <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 Generate the full homepage template and hero pattern.
 Return ONLY the JSON object with "indexTemplate" and "heroPattern" keys.`
 }
@@ -358,19 +441,47 @@ export function buildInnerTemplatesSystemPrompt(): string {
 
 Your output must be ONLY valid JSON — no prose, no markdown, no code fences.
 
-Generate four inner page templates. Apply all block markup rules: no wp:html, preset color and spacing slugs, constrained layouts on full-width groups.
+Apply all block markup rules: no wp:html, preset color and spacing slugs, constrained layouts on full-width groups.
+Font sizes: small, medium, large, x-large, xx-large, huge ONLY — never sm/md/lg/xl/2xl/3xl.
+
+LAYOUT PRINCIPLES — same as homepage:
+- Left-align body text and headings. Do not center everything.
+- Content in constrained groups, not full-width color blocks.
+- Clean, readable, real-website layouts.
 
 single.html:
-Start with header template-part. Then wp:group constrained with: wp:post-featured-image (wide aligned, aspect 16/9) + wp:post-title (large, heading font) + wp:post-date + wp:post-author in flex row (muted color) + wp:post-content + wp:post-tags. Then wp:query perPage 3 grid for related posts. End with footer template-part.
+Header template-part.
+wp:group constrained with good padding:
+  wp:post-featured-image (align wide, aspectRatio 16/9)
+  wp:post-title (level 1, large, left-aligned, heading font)
+  wp:group flex row (muted color, small font): wp:post-date + separator paragraph "·" + wp:post-author
+  wp:post-content
+  wp:post-tags
+wp:separator
+wp:group constrained: heading "More to Read" + wp:query (constrained) wrapping wp:post-template {"layout":{"type":"grid","columnCount":3}} and the same card stack (image → title → date)
+Footer template-part.
 
 page.html:
-Start with header template-part. Then wp:group with surface background containing wp:post-title. Then wp:post-content constrained with good padding. End with footer template-part.
+Header template-part.
+wp:group surface background constrained: wp:post-title (centered, large)
+wp:post-content constrained with horizontal padding.
+Footer template-part.
 
 archive.html:
-Start with header template-part. Then wp:group with wp:query-title + wp:term-description. Then wp:query perPage 9 grid with cards (featured image + post-title + post-date + post-excerpt). Then wp:query-pagination. End with footer template-part.
+Header template-part.
+wp:group constrained with padding: wp:query-title (large, left-aligned) + wp:term-description (muted)
+wp:query perPage 9 with layout:{"type":"constrained"}; wp:post-template MUST have layout:{"type":"grid","columnCount":3} (never put grid layout on wp:query). Card stack: image → title → date → excerpt.
+wp:query-pagination centered flex layout
+Footer template-part.
 
 404.html:
-Start with header template-part. Then centered wp:group with: huge "404" wp:heading (accent color, display font, clamp(6rem,15vw,12rem)) + notFoundMessage wp:paragraph + wp:search block + wp:buttons with Go Home link. End with footer template-part.
+Header template-part.
+wp:group constrained, center-aligned, generous padding top and bottom:
+  wp:heading level 1 "404" (accent color, heading font, clamp(6rem,15vw,12rem), centered)
+  wp:paragraph notFoundMessage (centered, muted color, large)
+  wp:search (centered, width 60%)
+  wp:buttons centered: single button "Go Home" with accent background linking to /
+Footer template-part.
 
 OUTPUT SCHEMA:
 {
@@ -388,6 +499,7 @@ Font slugs: ${brief.typography.fontFamilies.map((f) => f.slug).join(', ')}
 Not found message: "${brief.copyStrings.notFoundMessage}"
 Visual tension: ${brief.layoutPersonality.visualTension}
 Generate all four inner page templates. Each must start and end with header and footer template-part references.
+Left-align body text. Post card titles go below images, never on top. Archive and related-posts queries: grid layout belongs on wp:post-template, not wp:query.
 Return ONLY the JSON object with "single", "page", "archive", and "404" keys.`
 }
 
@@ -409,6 +521,8 @@ Rules:
 - Full-width groups must have layout type constrained
 - Preserve all existing color attributes
 - wp:cover minHeight at least 600 with minHeightUnit px
+- Left-align body text and section headings — do not center everything
+- Post card titles must appear BELOW featured images, never overlapping them
 - Return ONLY valid JSON, no prose, no markdown`
 }
 

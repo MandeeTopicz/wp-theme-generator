@@ -1,8 +1,11 @@
 import { useGeneration } from '../../context/GenerationContext'
 
 const STEPS = [
-  { key: 'design', label: 'Designing color system...', sublabel: 'Colors + Copy' },
-  { key: 'building', label: 'Building templates...', sublabel: 'Layout + Content' },
+  { key: 'brief', label: 'Crafting design brief...', sublabel: 'Colors + Typography + Layout' },
+  { key: 'header-footer', label: 'Building header & footer...', sublabel: 'Navigation + Branding' },
+  { key: 'homepage', label: 'Designing homepage...', sublabel: 'Hero + Sections' },
+  { key: 'inner-templates', label: 'Creating inner pages...', sublabel: 'Single + Archive + 404' },
+  { key: 'assembling', label: 'Assembling theme files...', sublabel: 'theme.json + style.css' },
   { key: 'validating', label: 'Validating theme...', sublabel: 'Checking' },
   { key: 'packaging', label: 'Packaging theme...', sublabel: 'Done' },
 ]

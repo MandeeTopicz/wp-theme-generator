@@ -91,6 +91,25 @@ html { scroll-behavior: smooth; }
   background: var(--wp--preset--color--accent, #7c6fff);
   color: #fff;
 }
+
+/* ── Transparent sticky header overlay ──────────────── */
+.wp-block-group.alignfull[style*="position:sticky"],
+.wp-block-group.alignfull[style*="position: sticky"] {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Ensure first content block after header is not pushed down */
+header + * {
+  margin-top: 0 !important;
+}
+
+/* ── Post card titles ───────────────────────────────── */
+.wp-block-post-template .wp-block-post-title {
+  position: relative;
+  z-index: 1;
+}
 `
 }
 
@@ -195,12 +214,19 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           fontFamily: f.fontFamily,
         })),
         fontSizes: [
-          { slug: 'sm', size: '14px', name: 'Small' },
-          { slug: 'md', size: '16px', name: 'Medium' },
-          { slug: 'lg', size: '20px', name: 'Large' },
-          { slug: 'xl', size: '28px', name: 'Extra large' },
-          { slug: '2xl', size: '40px', name: '2X large' },
-          { slug: '3xl', size: '56px', name: '3X large' },
+          { slug: 'small', size: '14px', name: 'Small' },
+          { slug: 'medium', size: '16px', name: 'Medium' },
+          { slug: 'large', size: '20px', name: 'Large' },
+          { slug: 'x-large', size: '28px', name: 'Extra large' },
+          { slug: 'xx-large', size: '40px', name: '2X large' },
+          { slug: 'huge', size: '56px', name: 'Huge' },
+          // aliases for AI-generated markup
+          { slug: 'sm', size: '14px', name: 'SM' },
+          { slug: 'md', size: '16px', name: 'MD' },
+          { slug: 'lg', size: '20px', name: 'LG' },
+          { slug: 'xl', size: '28px', name: 'XL' },
+          { slug: '2xl', size: '40px', name: '2XL' },
+          { slug: '3xl', size: '56px', name: '3XL' },
         ],
       },
       spacing: {
@@ -209,6 +235,13 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
         margin: true,
         blockGap: true,
         spacingSizes: [
+          { name: 'Small', slug: 'small', size: '20px' },
+          { name: 'Medium', slug: 'medium', size: '40px' },
+          { name: 'Large', slug: 'large', size: '60px' },
+          { name: 'X Large', slug: 'x-large', size: '80px' },
+          { name: 'XX Large', slug: 'xx-large', size: '120px' },
+          { name: 'Huge', slug: 'huge', size: '160px' },
+          // numeric aliases
           { name: '20', slug: '20', size: '20px' },
           { name: '40', slug: '40', size: '40px' },
           { name: '60', slug: '60', size: '60px' },

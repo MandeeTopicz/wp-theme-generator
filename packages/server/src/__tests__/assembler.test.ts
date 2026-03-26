@@ -89,7 +89,10 @@ describe('buildThemeJSON', () => {
     expect(json.settings.spacing.padding).toBe(true)
     expect(json.settings.spacing.margin).toBe(true)
     const slugs = json.settings.spacing.spacingSizes.map((e: { slug: string }) => e.slug)
-    expect(slugs).toEqual(['20', '40', '60', '80', '120', '160'])
+    expect(slugs).toEqual([
+      'small', 'medium', 'large', 'x-large', 'xx-large', 'huge',
+      '20', '40', '60', '80', '120', '160',
+    ])
   })
 
   it('defaults content width to 860px when layout is omitted', () => {
