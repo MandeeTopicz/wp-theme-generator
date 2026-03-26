@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import express, { type Express } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -122,6 +123,24 @@ app.use('/api/download', downloadRouter)
 app.use('/api/playground', playgroundRouter)
 app.use('/api/validate', sanitize, validateRouter)
 app.use('/api/iterate', sanitize, iterateRouter)
+
+// Serve client build in production — static assets + SPA fallback
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const clientDistCandidates = [
+  path.resolve(process.cwd(), 'packages/client/dist'),
+  path.resolve(__dirname, '../../client/dist'),
+  path.resolve(process.cwd(), '../client/dist'),
+]
+const clientDist = clientDistCandidates.find(d => fs.existsSync(d)) ?? ''
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist))
+  // SPA fallback: any non-API route serves index.html
+  app.get('*', (_req, res, next) => {
+    if (_req.path.startsWith('/api/')) return next()
+    res.sendFile(path.join(clientDist, 'index.html'))
+  })
+  console.log(`[static] Serving client from ${clientDist}`)
+}
 
 app.use(errorHandler)
 
