@@ -125,14 +125,19 @@ app.use('/api/validate', sanitize, validateRouter)
 app.use('/api/iterate', sanitize, iterateRouter)
 
 // Serve client build in production — static assets + SPA fallback
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __serverDir = path.dirname(fileURLToPath(import.meta.url))
 const clientDistCandidates = [
   path.resolve(process.cwd(), 'packages/client/dist'),
-  path.resolve(__dirname, '../../client/dist'),
+  path.resolve(__serverDir, '../../client/dist'),
+  path.resolve(process.cwd(), 'client/dist'),
   path.resolve(process.cwd(), '../client/dist'),
+  path.resolve(process.cwd(), 'dist'),
 ]
-const clientDist = clientDistCandidates.find(d => fs.existsSync(d)) ?? ''
-if (fs.existsSync(clientDist)) {
+console.log('[static] cwd:', process.cwd())
+console.log('[static] __serverDir:', __serverDir)
+console.log('[static] candidates:', clientDistCandidates.map(d => `${d} (${fs.existsSync(d) ? 'EXISTS' : 'missing'})`))
+const clientDist = clientDistCandidates.find(d => fs.existsSync(path.join(d, 'index.html'))) ?? ''
+if (clientDist) {
   app.use(express.static(clientDist))
   // SPA fallback: any non-API route serves index.html
   app.get('*', (_req, res, next) => {
@@ -140,6 +145,8 @@ if (fs.existsSync(clientDist)) {
     res.sendFile(path.join(clientDist, 'index.html'))
   })
   console.log(`[static] Serving client from ${clientDist}`)
+} else {
+  console.warn('[static] WARNING: No client dist found — / will 404')
 }
 
 app.use(errorHandler)
