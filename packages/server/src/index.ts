@@ -35,7 +35,20 @@ app.use(cors())
 app.use(express.json({ limit: '5mb' }))
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  const __sd = path.dirname(fileURLToPath(import.meta.url))
+  const candidates = [
+    path.resolve(process.cwd(), 'packages/client/dist'),
+    path.resolve(__sd, '../../client/dist'),
+    path.resolve(process.cwd(), 'client/dist'),
+    path.resolve(process.cwd(), '../client/dist'),
+  ]
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    cwd: process.cwd(),
+    serverDir: __sd,
+    candidates: candidates.map(d => ({ path: d, exists: fs.existsSync(d), hasIndex: fs.existsSync(path.join(d, 'index.html')) })),
+  })
 })
 
 // Quick API key validation — tests with a tiny request
