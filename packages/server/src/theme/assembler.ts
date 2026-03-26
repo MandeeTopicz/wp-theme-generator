@@ -92,16 +92,23 @@ html { scroll-behavior: smooth; }
   color: #fff;
 }
 
-/* ── Transparent sticky header overlay ──────────────── */
-.wp-block-group.alignfull[style*="position:sticky"],
-.wp-block-group.alignfull[style*="position: sticky"] {
-  position: sticky;
+/* ── Transparent sticky header — no document flow gap ── */
+.wp-block-template-part[class*="header"] > .wp-block-group[style*="position:sticky"],
+header.wp-block-group[style*="position:sticky"] {
+  position: sticky !important;
   top: 0;
   z-index: 100;
 }
 
-/* Ensure first content block after header is not pushed down */
-header + * {
+/* Force compact header — override any AI-generated or theme.json group padding */
+header.wp-block-group,
+.wp-block-template-part[class*="header"] > .wp-block-group {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+/* Remove gap between header and first content block */
+.wp-site-blocks > header + * {
   margin-top: 0 !important;
 }
 
@@ -193,6 +200,22 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
   } else if (colors.length === 1) {
     bgSlug = colors[0]!.slug
     textSlug = colors[0]!.slug
+  }
+
+  // Determine button text color: pick whichever of bg or text has better contrast against accent
+  let buttonTextSlug = textSlug
+  const accentEntry = colors.find(c => c.slug === accentSlug)
+  if (accentEntry && colors.length >= 2) {
+    const accentLum = getLuminance(accentEntry.color)
+    const contrastWithAccent = (hex: string): number => {
+      const lum = getLuminance(hex)
+      return (Math.max(accentLum, lum) + 0.05) / (Math.min(accentLum, lum) + 0.05)
+    }
+    const bgEntry = colors.find(c => c.slug === bgSlug)
+    const txtEntry = colors.find(c => c.slug === textSlug)
+    if (bgEntry && txtEntry) {
+      buttonTextSlug = contrastWithAccent(bgEntry.color) > contrastWithAccent(txtEntry.color) ? bgSlug : textSlug
+    }
   }
 
   const result = {
@@ -326,7 +349,7 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           button: {
             color: {
               background: `var(--wp--preset--color--${accentSlug})`,
-              text: `var(--wp--preset--color--${textSlug})`,
+              text: `var(--wp--preset--color--${buttonTextSlug})`,
             },
             typography: {
               fontWeight: '600',
@@ -410,7 +433,7 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
           },
           'core/site-title': {
             color: { text: `var(--wp--preset--color--${textSlug})` },
-            typography: { fontWeight: '700', textTransform: 'none', fontSize: '1.25rem' },
+            typography: { fontWeight: '700', textTransform: 'none', fontSize: '1.05rem' },
             elements: {
               link: {
                 color: { text: `var(--wp--preset--color--${textSlug})` },
@@ -515,7 +538,7 @@ function fixBlockMarkup(content: string): string {
     },
   )
 
-  // Covers: minimum height (px) and sensible full-width align when implied by vh height.
+  // Covers: minimum height (px), sensible full-width align, and enforce dimRatio for contrast.
   content = content.replace(
     /<!--\s*wp:cover\s*(?:(\{[^]*?\}))?\s*-->/g,
     (_match, attrsStr?: string) => {
@@ -541,6 +564,16 @@ function fixBlockMarkup(content: string): string {
             (typeof origH === 'number' && origH >= 50))
         ) {
           attrs.align = 'full'
+        }
+        // Only enforce dimRatio on covers with an overlay color (hero-style).
+        // Covers without overlayColor may be used for image display — leave them alone.
+        if (attrs.overlayColor) {
+          const dimRatio = typeof attrs.dimRatio === 'number' ? attrs.dimRatio : 0
+          if (dimRatio < 80) {
+            attrs.dimRatio = 80
+          }
+          // Ensure isDark is set so WordPress renders light text inside
+          attrs.isDark = true
         }
         return `<!-- wp:cover ${JSON.stringify(attrs)} -->`
       } catch {

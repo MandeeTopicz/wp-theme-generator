@@ -212,30 +212,41 @@ BLOCK MARKUP RULES — FOLLOW EXACTLY:
 
 7. Navigation: <!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"right"}} /-->
 
+8. CRITICAL — header template part scope:
+   The header block must be the ONLY block in the header template part output.
+   Do NOT add any wp:navigation, wp:page-list, or wp:buttons blocks outside the header group.
+   The entire header.html file must be a single wp:group with tagName "header" containing
+   site-title and navigation — nothing else before or after it.
+
 HEADER DESIGN PRINCIPLES — READ CAREFULLY:
 
 The header must look like a real website header, not a colored bar. Study these rules:
 
-- Keep it lightweight: logo left, nav right, generous horizontal padding, minimal vertical padding
+- Keep it lightweight: logo left, nav right, generous horizontal padding, VERY minimal vertical padding
 - The header should NOT be a heavy colored block — it should feel like it floats above the page
-- For "solid-bar": use base or surface color, keep it thin (padding top/bottom: var(--wp--preset--spacing--40) max)
+- CRITICAL: The header must be THIN. Use padding top/bottom of var(--wp--preset--spacing--20) ONLY. Never use spacing--40 or larger for vertical padding.
+- For "solid-bar": use base or surface color, keep it very thin and sleek
 - For "transparent-overlay": no background color, overlaid on hero, text must be light colored to read over hero image
 - Navigation links should NOT be styled with background colors — plain text links only
-- Site title: font-weight 700, use heading font family, modest size (1.1rem to 1.4rem)
+- Site title: font-weight 700, use heading font family, small size (1rem to 1.2rem) — do NOT make it large
+- Navigation font size: 0.85rem to 0.9rem — keep it compact
 
-CORRECT header structure — logo left, nav right, thin bar:
-<!-- wp:group {"tagName":"header","align":"full","backgroundColor":"base","layout":{"type":"flex","justifyContent":"space-between","alignItems":"center"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--40)","bottom":"var(--wp--preset--spacing--40)","left":"var(--wp--preset--spacing--80)","right":"var(--wp--preset--spacing--80)"}}}} -->
+CRITICAL for transparent-overlay header:
+- Add "className":"is-position-sticky" to the header wp:group JSON attributes (with tagName, align, layout, etc.)
+- On index.html, the wp:cover full-bleed hero immediately after <!-- wp:template-part {"slug":"header"...} /> MUST include style spacing margin top zero (merge if other style keys exist): "style":{"spacing":{"margin":{"top":"0"}}} so the cover sits flush under the sticky transparent bar without a visible gap
+
+CORRECT header structure — logo left, nav right, thin sleek bar:
+<!-- wp:group {"tagName":"header","align":"full","backgroundColor":"base","layout":{"type":"flex","justifyContent":"space-between","alignItems":"center"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--20)","bottom":"var(--wp--preset--spacing--20)","left":"var(--wp--preset--spacing--80)","right":"var(--wp--preset--spacing--80)"}}}} -->
 <header class="wp-block-group alignfull has-base-background-color has-background">
-<!-- wp:site-title {"level":0,"isLink":true,"textColor":"foreground","style":{"typography":{"fontWeight":"700","fontSize":"1.2rem","fontFamily":"var(--wp--preset--font-family--heading)"}}} /-->
-<!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","textColor":"foreground","layout":{"type":"flex","justifyContent":"right","flexWrap":"nowrap"},"style":{"typography":{"fontSize":"0.9rem","fontWeight":"500"}}} /-->
+<!-- wp:site-title {"level":0,"isLink":true,"textColor":"foreground","style":{"typography":{"fontWeight":"700","fontSize":"1.1rem","fontFamily":"var(--wp--preset--font-family--heading)"}}} /-->
+<!-- wp:navigation {"ariaLabel":"Main navigation","overlayMenu":"mobile","textColor":"foreground","layout":{"type":"flex","justifyContent":"right","flexWrap":"nowrap"},"style":{"typography":{"fontSize":"0.85rem","fontWeight":"500"}}} /-->
 </header>
 <!-- /wp:group -->
 
 FOOTER DESIGN PRINCIPLES:
 
 - Footer should use surface or a dark version of base as background
-- Two-column layout: copyright left, footer nav right (or single centered column for minimal themes)
-- Keep it simple — copyright text + optional nav links
+- Single centered copyright line only — do NOT add wp:navigation in the footer (fresh installs show confusing default links like "About" in Playground)
 - Padding: var(--wp--preset--spacing--80) top and bottom
 - Text size: small (0.875rem)
 - Never add decorative elements, icons, or social media blocks unless explicitly requested
@@ -243,14 +254,9 @@ FOOTER DESIGN PRINCIPLES:
 CORRECT footer structure:
 <!-- wp:group {"tagName":"footer","align":"full","backgroundColor":"surface","layout":{"type":"constrained"},"style":{"spacing":{"padding":{"top":"var(--wp--preset--spacing--80)","bottom":"var(--wp--preset--spacing--80)","left":"var(--wp--preset--spacing--80)","right":"var(--wp--preset--spacing--80)"}}}} -->
 <footer class="wp-block-group alignfull has-surface-background-color has-background">
-<!-- wp:group {"layout":{"type":"flex","justifyContent":"space-between","alignItems":"center","flexWrap":"wrap"}} -->
-<div class="wp-block-group">
-<!-- wp:paragraph {"textColor":"muted","style":{"typography":{"fontSize":"0.875rem"}}} -->
-<p class="has-muted-color has-text-color">COPYRIGHT_TEXT</p>
+<!-- wp:paragraph {"textColor":"muted","align":"center","style":{"typography":{"fontSize":"0.875rem"}}} -->
+<p class="has-muted-color has-text-color has-text-align-center">COPYRIGHT_TEXT</p>
 <!-- /wp:paragraph -->
-<!-- wp:navigation {"ariaLabel":"Footer navigation","overlayMenu":"never","textColor":"muted","layout":{"type":"flex","flexWrap":"wrap"},"style":{"typography":{"fontSize":"0.875rem"}}} /-->
-</div>
-<!-- /wp:group -->
 </footer>
 <!-- /wp:group -->
 
@@ -332,8 +338,9 @@ Study how Twenty Twenty-Five, Astra, and Hello Elementor themes look. Apply thes
 
 5. HERO VARIANTS — BUILD THEM CORRECTLY:
 
-"full-bleed-cover": wp:cover, minHeight from heroHeight, align full, overlayColor foreground, dimRatio 50-70.
-Content inside: heading (large, can be centered) + subheading + optional button. Use constrained inner group.
+"full-bleed-cover": wp:cover, minHeight from heroHeight, align full, overlayColor foreground, dimRatio 80, isDark true.
+Content inside: heading (large, can be centered, textColor "base") + subheading (textColor "base") + optional button. Use constrained inner group.
+Hero text MUST use "base" textColor so it contrasts against the dark overlay. Buttons use accent background with accent-foreground text.
 
 "split-layout": wp:columns, NO align full, constrained layout, good padding.
 Left column (60%): large left-aligned heading + subheading paragraph + wp:buttons
@@ -346,7 +353,8 @@ Add a thin accent-colored horizontal rule (wp:separator) above or below heading 
 Subheading paragraph left-aligned, max-width ~600px. Button left-aligned.
 
 "centered-minimal": wp:group constrained, center-aligned, max content width ~700px.
-Clean heading, short subheading, single CTA button. Lots of top and bottom padding. White background.
+Clean heading, short subheading, single CTA button. Lots of top and bottom padding. Use base background.
+Heading and subheading must use foreground color for strong contrast against base.
 
 6. SECTION PATTERNS — BUILD THEM CORRECTLY:
 
