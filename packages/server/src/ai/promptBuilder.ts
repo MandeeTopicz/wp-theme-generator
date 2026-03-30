@@ -64,18 +64,13 @@ fontFamily value must be a valid CSS font-family stack, e.g.: "Syne, sans-serif"
 
 PART 3 — LAYOUT PERSONALITY
 
-heroStyle — pick one:
-- "full-bleed-cover": Full viewport-height cover block with overlay text
-- "split-layout": Two-column split, text left + image right
-- "typography-hero": Large display text only, no image, left-aligned
-- "centered-minimal": Centered text block, generous whitespace, single CTA
+heroStyle — ALWAYS use "full-bleed-cover": Full viewport-height cover block with overlay text.
+This is the default hero layout for ALL themes. Do not pick any other style.
 
-heroHeight — pick one: "100vh", "85vh", "70vh"
+heroHeight — ALWAYS use "85vh"
 
-headerStyle — pick one:
-- "transparent-overlay": Header overlaid on hero, transparent background
-- "solid-bar": Solid background color header
-- "minimal-centered": Logo centered, nav below
+headerStyle — ALWAYS use "transparent-overlay": Header overlaid on hero, transparent background.
+This pairs with the full-bleed-cover hero to create a seamless, immersive top section.
 
 sectionsOrder: array of 3-5 names from: "features", "latest-posts", "about", "cta", "testimonials", "stats", "portfolio-grid"
 
@@ -293,6 +288,16 @@ BLOCK MARKUP RULES:
 - Font sizes: small, medium, large, x-large, xx-large, huge ONLY — never sm/md/lg/xl
 - Font families: {"fontFamily":"var(--wp--preset--font-family--heading)"}
 
+CRITICAL — PLACEHOLDER IMAGES ARE MANDATORY:
+Every theme MUST include placeholder images from https://picsum.photos. Themes without images look broken and empty.
+- Hero cover: MUST have a "url" attribute with a picsum image, e.g. "url":"https://picsum.photos/id/1084/1600/900"
+- About section: MUST include a wp:image in the right column with a picsum image, e.g. src="https://picsum.photos/id/1018/800/600"
+- Features section: Each feature column SHOULD include a wp:image with a relevant picsum image (use different IDs like 1005, 1011, 1025)
+- Any section that would benefit from visual interest: add wp:image blocks with picsum images
+- Use DIFFERENT picsum IDs for each image (pick from range 1000-1084 for high-quality landscape photos)
+- Hero images: use 1600/900 dimensions. Section images: use 800/600 or 600/400 dimensions.
+- NEVER omit the hero cover image URL. A cover block without a background image is not a cover.
+
 CRITICAL LAYOUT PRINCIPLES — THIS IS WHAT MAKES A THEME LOOK LIKE A REAL WEBSITE:
 
 Study how Twenty Twenty-Five, Astra, and Hello Elementor themes look. Apply these rules without exception:
@@ -338,9 +343,28 @@ Study how Twenty Twenty-Five, Astra, and Hello Elementor themes look. Apply thes
 
 5. HERO VARIANTS — BUILD THEM CORRECTLY:
 
-"full-bleed-cover": wp:cover, minHeight from heroHeight, align full, overlayColor foreground, dimRatio 80, isDark true.
-Content inside: heading (large, can be centered, textColor "base") + subheading (textColor "base") + optional button. Use constrained inner group.
+"full-bleed-cover": wp:cover with REQUIRED attributes: "url":"https://picsum.photos/id/NNNN/1600/900" (pick a random ID 1000-1084), minHeight from heroHeight, minHeightUnit "vh", align full, overlayColor foreground, dimRatio 80, isDark true.
+Content inside: constrained inner group with heading (huge font size, centered, textColor "base") + subheading paragraph (centered, textColor "base") + optional button.
 Hero text MUST use "base" textColor so it contrasts against the dark overlay. Buttons use accent background with accent-foreground text.
+CRITICAL: The wp:cover block MUST include a "url" attribute pointing to a picsum.photos image AND a matching <img> tag inside the cover div. Without these, the cover renders as a flat color block with no visual impact.
+
+CORRECT full-bleed-cover example:
+<!-- wp:cover {"url":"https://picsum.photos/id/1084/1600/900","dimRatio":80,"overlayColor":"foreground","minHeight":85,"minHeightUnit":"vh","isDark":true,"align":"full"} -->
+<div class="wp-block-cover alignfull is-dark" style="min-height:85vh"><span aria-hidden="true" class="wp-block-cover__background has-foreground-background-color has-background-dim-80 has-background-dim"></span><img class="wp-block-cover__image-background" alt="" src="https://picsum.photos/id/1084/1600/900" data-object-fit="cover"/>
+<div class="wp-block-cover__inner-container">
+<!-- wp:group {"layout":{"type":"constrained"}} -->
+<div class="wp-block-group">
+<!-- wp:heading {"textAlign":"center","textColor":"base","fontSize":"huge"} -->
+<h2 class="wp-block-heading has-text-align-center has-base-color has-text-color has-huge-font-size">Hero Heading Here</h2>
+<!-- /wp:heading -->
+<!-- wp:paragraph {"align":"center","textColor":"base","fontSize":"large"} -->
+<p class="has-text-align-center has-base-color has-text-color has-large-font-size">Hero subheading text here.</p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:group -->
+</div>
+</div>
+<!-- /wp:cover -->
 
 "split-layout": wp:columns, NO align full, constrained layout, good padding.
 Left column (60%): large left-aligned heading + subheading paragraph + wp:buttons
@@ -361,7 +385,7 @@ Heading and subheading must use foreground color for strong contrast against bas
 "features": wp:group with surface background, constrained, good padding.
   Section heading LEFT-ALIGNED above the columns.
   wp:columns with 3 wp:column children.
-  Each column: accent-colored large number or icon heading + bold title + body paragraph. LEFT-ALIGNED.
+  Each column: wp:image with a picsum.photos placeholder (different IDs per column, e.g. 1005, 1011, 1025, dimensions 600/400, border-radius 8px) + bold title heading + body paragraph. LEFT-ALIGNED.
   No full-width background needed — surface color on the group is enough.
 
 "latest-posts": wp:group, white/base background, constrained.
@@ -370,9 +394,10 @@ Heading and subheading must use foreground color for strong contrast against bas
   Use the full query + post-template + card markup from rule 4 above.
 
 "about": wp:group, surface background, constrained, good padding.
-  wp:columns, two columns: text left (60%), optional image right (40%).
+  wp:columns with verticalAlignment "center", two columns: text left (60%), image right (40%).
   Left column: aboutHeading (left-aligned, large) + aboutDescription paragraphs.
-  NOT centered. NOT full-width color block.
+  Right column: MUST include a wp:image with a picsum.photos placeholder (e.g. src="https://picsum.photos/id/1018/800/600") and border-radius 8px.
+  NOT centered. NOT full-width color block. The image is REQUIRED, not optional.
 
 "cta": wp:group, accent background, align full, constrained inner group, center-aligned content.
   ctaHeading (large, centered, accent-foreground color) + ctaDescription + wp:buttons centered.
@@ -389,9 +414,11 @@ Heading and subheading must use foreground color for strong contrast against bas
 
 INDEX.HTML STRUCTURE:
 1. <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
-2. Hero section (inline markup per heroStyle)
+2. <!-- wp:pattern {"slug":"THEME_SLUG/hero"} /--> (references the hero pattern — do NOT put hero markup inline in index.html)
 3. Each section from sectionsOrder — vary backgrounds, vary alignment
 4. <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
+
+CRITICAL: The hero MUST be referenced via wp:pattern in index.html, NOT inlined. The actual hero cover markup goes in the heroPattern output only.
 
 OUTPUT SCHEMA:
 {
@@ -432,6 +459,9 @@ aboutDescription: "${brief.copyStrings.aboutDescription}"
 featureItems: ${JSON.stringify(brief.copyStrings.featureItems)}
 
 REMINDERS:
+- IMAGES ARE MANDATORY: The hero wp:cover MUST have a "url" with a picsum.photos image AND a matching <img> tag. The about section MUST have a wp:image. Feature columns SHOULD have wp:image blocks. A theme without images looks broken.
+- The indexTemplate MUST reference the hero via: <!-- wp:pattern {"slug":"${brief.slug}/hero"} /--> — do NOT put hero cover markup inline in indexTemplate.
+- The heroPattern output contains the actual wp:cover block with the full-bleed background image (85vh, dimRatio 80, isDark true, with a picsum.photos url).
 - Left-align body text and section headings. Only center hero headings and CTA sections.
 - Post card titles go BELOW the featured image, never on top of it.
 - Vary section backgrounds — not every section needs a colored background.
@@ -457,11 +487,11 @@ LAYOUT PRINCIPLES — same as homepage:
 - Content in constrained groups, not full-width color blocks.
 - Clean, readable, real-website layouts.
 
+NOTE: A full-bleed cover image banner will be automatically added to the top of each template during post-processing. You do NOT need to include a wp:cover block. Just start with the header template-part and then the content.
+
 single.html:
 Header template-part.
 wp:group constrained with good padding:
-  wp:post-featured-image (align wide, aspectRatio 16/9)
-  wp:post-title (level 1, large, left-aligned, heading font)
   wp:group flex row (muted color, small font): wp:post-date + separator paragraph "·" + wp:post-author
   wp:post-content
   wp:post-tags
@@ -471,13 +501,12 @@ Footer template-part.
 
 page.html:
 Header template-part.
-wp:group surface background constrained: wp:post-title (centered, large)
 wp:post-content constrained with horizontal padding.
 Footer template-part.
 
 archive.html:
 Header template-part.
-wp:group constrained with padding: wp:query-title (large, left-aligned) + wp:term-description (muted)
+wp:group constrained with padding: wp:term-description (muted)
 wp:query perPage 9 with layout:{"type":"constrained"}; wp:post-template MUST have layout:{"type":"grid","columnCount":3} (never put grid layout on wp:query). Card stack: image → title → date → excerpt.
 wp:query-pagination centered flex layout
 Footer template-part.
@@ -485,7 +514,6 @@ Footer template-part.
 404.html:
 Header template-part.
 wp:group constrained, center-aligned, generous padding top and bottom:
-  wp:heading level 1 "404" (accent color, heading font, clamp(6rem,15vw,12rem), centered)
   wp:paragraph notFoundMessage (centered, muted color, large)
   wp:search (centered, width 60%)
   wp:buttons centered: single button "Go Home" with accent background linking to /
@@ -508,6 +536,7 @@ Font slugs: ${brief.typography.fontFamilies.map((f) => f.slug).join(', ')}
 Not found message: "${brief.copyStrings.notFoundMessage}"
 Visual tension: ${brief.layoutPersonality.visualTension}
 Generate all four inner page templates. Each must start and end with header and footer template-part references.
+Do NOT include wp:cover blocks — cover banners are added automatically during post-processing.
 Left-align body text. Post card titles go below images, never on top. Archive and related-posts queries: grid layout belongs on wp:post-template, not wp:query.
 Return ONLY the JSON object with "single", "page", "archive", and "404" keys.`
 }

@@ -87,6 +87,18 @@ export async function runGenerationPipeline(
   )
 
   const homepage = parseHomepage(homepageRaw)
+
+  // Ensure index.html references the hero pattern instead of inlining hero markup
+  const heroPatternRef = `<!-- wp:pattern {"slug":"${brief.slug}/hero"} /-->`
+  if (!homepage.indexTemplate.includes('wp:pattern')) {
+    // Inject hero pattern reference right after the header template-part
+    homepage.indexTemplate = homepage.indexTemplate.replace(
+      /(<!--\s*wp:template-part\s*\{[^}]*"slug"\s*:\s*"header"[^}]*\}\s*\/-->)/,
+      `$1\n\n${heroPatternRef}`,
+    )
+    console.log('[pipeline] Injected hero pattern reference into index.html')
+  }
+
   console.log('[pipeline] Homepage: index=%d chars, hero=%d chars',
     homepage.indexTemplate.length,
     homepage.heroPattern.length,

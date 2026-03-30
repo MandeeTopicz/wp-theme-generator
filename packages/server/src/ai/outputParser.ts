@@ -129,11 +129,17 @@ export function parseDesignBrief(raw: string): DesignBrief {
     data.layoutPersonality = {
       heroStyle: 'full-bleed-cover',
       heroHeight: '85vh',
-      headerStyle: 'solid-bar',
+      headerStyle: 'transparent-overlay',
       sectionsOrder: ['features', 'latest-posts', 'cta'],
       visualTension: 'Strong typographic contrast between display and body text.',
     }
   }
+
+  // Enforce full-bleed-cover hero as the default layout for all themes
+  const lp = data.layoutPersonality as Record<string, unknown>
+  lp.heroStyle = 'full-bleed-cover'
+  lp.heroHeight = '85vh'
+  lp.headerStyle = 'transparent-overlay'
 
   // Recovery: fix featureItems count
   const copy = data.copyStrings as Record<string, unknown> | undefined

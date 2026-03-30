@@ -486,6 +486,63 @@ export function buildThemeJSON(manifest: ThemeManifest): string {
   return JSON.stringify(result, null, 2)
 }
 
+/** Picsum IDs mapped by template name for deterministic, varied cover images */
+const COVER_IMAGE_IDS: Record<string, number> = {
+  index: 1084,
+  single: 1045,
+  page: 1055,
+  archive: 1035,
+  '404': 1065,
+}
+
+/**
+ * Ensure a template has a full-bleed cover banner with a background image
+ * immediately after the header template-part. If the AI omitted it, inject one.
+ */
+function ensureCoverBanner(content: string, templateName: string): string {
+  // index.html uses the hero pattern — don't inject a second cover
+  if (templateName === 'index') return content
+
+  // Already has a cover block — leave it alone
+  if (content.includes('wp:cover')) return content
+
+  const picId = COVER_IMAGE_IDS[templateName] ?? (1040 + Math.floor(Math.random() * 40))
+  const imgUrl = `https://picsum.photos/id/${picId}/1600/900`
+
+  // Determine what title block to put inside the cover
+  let titleBlock: string
+  if (templateName === '404') {
+    titleBlock = `<!-- wp:heading {"textAlign":"center","textColor":"base","fontSize":"huge","style":{"typography":{"fontFamily":"var(--wp--preset--font-family--heading)"}}} -->
+<h2 class="wp-block-heading has-text-align-center has-base-color has-text-color has-huge-font-size">404</h2>
+<!-- /wp:heading -->`
+  } else if (templateName === 'archive') {
+    titleBlock = `<!-- wp:query-title {"textAlign":"center","textColor":"base","fontSize":"huge"} /-->`
+  } else {
+    titleBlock = `<!-- wp:post-title {"textAlign":"center","textColor":"base","fontSize":"huge"} /-->`
+  }
+
+  const coverBlock = `<!-- wp:cover {"url":"${imgUrl}","dimRatio":80,"overlayColor":"foreground","minHeight":40,"minHeightUnit":"vh","isDark":true,"align":"full"} -->
+<div class="wp-block-cover alignfull is-dark" style="min-height:40vh"><span aria-hidden="true" class="wp-block-cover__background has-foreground-background-color has-background-dim-80 has-background-dim"></span><img class="wp-block-cover__image-background" alt="" src="${imgUrl}" data-object-fit="cover"/>
+<div class="wp-block-cover__inner-container">
+<!-- wp:group {"layout":{"type":"constrained"}} -->
+<div class="wp-block-group">
+${titleBlock}
+</div>
+<!-- /wp:group -->
+</div>
+</div>
+<!-- /wp:cover -->`
+
+  // Inject after the header template-part
+  const headerPartRegex = /(<!--\s*wp:template-part\s*\{[^}]*"slug"\s*:\s*"header"[^}]*\}\s*\/-->)/
+  if (headerPartRegex.test(content)) {
+    return content.replace(headerPartRegex, `$1\n\n${coverBlock}`)
+  }
+
+  // If no header template-part found, prepend
+  return `${coverBlock}\n\n${content}`
+}
+
 export function buildTemplateFile(template: BlockTemplate): string {
   let content = template.content
 
@@ -498,13 +555,16 @@ export function buildTemplateFile(template: BlockTemplate): string {
 
   // If the AI already included template-part references, return as-is
   if (content.includes('wp:template-part')) {
+    content = ensureCoverBanner(content, template.name)
     return content
   }
 
   // Otherwise wrap with header/footer template parts
-  return `<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+  content = `<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 ${content}
 <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->`
+  content = ensureCoverBanner(content, template.name)
+  return content
 }
 
 /**
@@ -552,11 +612,21 @@ function fixBlockMarkup(content: string): string {
             : typeof origH === 'string'
               ? parseFloat(origH)
               : NaN
-        const needsMinPx =
-          origUnit !== 'px' || !Number.isFinite(parsedH) || parsedH < 600
-        if (needsMinPx) {
-          attrs.minHeight = 600
-          attrs.minHeightUnit = 'px'
+        // Preserve vh units (used for hero covers) — only enforce minimum for px
+        const isVh = origUnit === 'vh'
+        if (isVh) {
+          // Keep vh value, just ensure it's at least 50vh
+          if (!Number.isFinite(parsedH) || parsedH < 50) {
+            attrs.minHeight = 85
+            attrs.minHeightUnit = 'vh'
+          }
+        } else {
+          const needsMinPx =
+            origUnit !== 'px' || !Number.isFinite(parsedH) || parsedH < 600
+          if (needsMinPx) {
+            attrs.minHeight = 600
+            attrs.minHeightUnit = 'px'
+          }
         }
         if (
           !attrs.align &&
@@ -574,8 +644,34 @@ function fixBlockMarkup(content: string): string {
           }
           // Ensure isDark is set so WordPress renders light text inside
           attrs.isDark = true
+          // Ensure hero-style covers always have a placeholder background image
+          if (!attrs.url) {
+            const picId = 1015 + Math.floor(Math.random() * 70)
+            attrs.url = `https://picsum.photos/id/${picId}/1600/900`
+          }
         }
         return `<!-- wp:cover ${JSON.stringify(attrs)} -->`
+      } catch {
+        return _match
+      }
+    },
+  )
+
+  // Ensure cover blocks with a url attribute have a matching <img> tag inside
+  content = content.replace(
+    /<!--\s*wp:cover\s+(\{[^]*?\})\s*-->\s*\n(<div[^>]*class="wp-block-cover[^"]*"[^>]*>)/g,
+    (_match, attrsStr: string, divTag: string) => {
+      try {
+        const attrs = JSON.parse(attrsStr) as Record<string, unknown>
+        if (attrs.url && !_match.includes('wp-block-cover__image-background')) {
+          const imgTag = `<img class="wp-block-cover__image-background" alt="" src="${attrs.url}" data-object-fit="cover"/>`
+          const spanTag = `<span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span>`
+          // Inject span + img right after the opening div if missing
+          const hasSpan = _match.includes('wp-block-cover__background')
+          const injection = hasSpan ? imgTag : `${spanTag}${imgTag}`
+          return `<!-- wp:cover ${attrsStr} -->\n${divTag}${injection}`
+        }
+        return _match
       } catch {
         return _match
       }
@@ -648,7 +744,14 @@ export function buildPatternFile(pattern: {
   categories: string[]
   content: string
 }): string {
-  const content = ensureNavAriaLabel(pattern.content)
+  let content = pattern.content
+
+  // Strip any AI-generated PHP header — we add our own below
+  content = content.replace(/^<\?php[\s\S]*?\?>\s*/m, '')
+
+  // Run the same block markup fixes (cover image injection, etc.)
+  content = fixBlockMarkup(content)
+  content = ensureNavAriaLabel(content)
 
   return `<?php
 /**
